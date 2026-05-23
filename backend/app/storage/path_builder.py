@@ -22,3 +22,9 @@ class PathBuilder:
 
     def build_export_path(self, project_id: str, filename: str) -> str:
         return f"{self.ROOT_DIR}/project_{project_id}/exports/{filename}"
+
+    def build_metadata_path(self, project_id: str) -> str:
+        return f"{self.ROOT_DIR}/project_{project_id}/metadata"
+
+    def build_history_path(self, project_id: str) -> str:
+        return f"{self.ROOT_DIR}/project_{project_id}/history.json"

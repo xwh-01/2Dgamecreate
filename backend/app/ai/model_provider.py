@@ -1,24 +1,35 @@
 # Model provider registry and selection logic
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
 
-from .image_generator_client import ImageGeneratorClient
+from ..config import get_settings
+from .image_generator_client import ImageGeneratorClient, OpenAIImageClient
 
 
 @dataclass
 class ModelInfo:
     name: str
     provider: str
-    supported_sizes: list[str]
+    supported_sizes: list
     supports_transparency: bool = False
 
 
-class ModelProvider(ABC):
-    @abstractmethod
-    def get_client(self, model_name: Optional[str] = None, **kwargs) -> ImageGeneratorClient:
-        raise NotImplementedError
+class ModelProvider:
+    def get_client(self, model_name: str = "", **kwargs) -> ImageGeneratorClient:
+        settings = get_settings()
+        provider = model_name or settings.image_provider
 
-    @abstractmethod
+        if provider == "openai":
+            return OpenAIImageClient(
+                api_key=settings.image_api_key,
+                model=settings.image_model,
+            )
+        raise RuntimeError(f"Unsupported image provider: {provider}")
+
     def list_models(self) -> list[ModelInfo]:
-        raise NotImplementedError
+        return [
+            ModelInfo(
+                name="dall-e-3",
+                provider="openai",
+                supported_sizes=["1024x1024", "1024x1792", "1792x1024"],
+            ),
+        ]
