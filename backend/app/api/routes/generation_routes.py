@@ -72,6 +72,7 @@ ASSET_TYPE_MAP = {
     "character": AssetType.CHARACTER,
     "enemy": AssetType.ENEMY,
     "item": AssetType.PROP,
+    "prop": AssetType.PROP,
     "tile": AssetType.TILE,
     "ui_icon": AssetType.UI_ICON,
     "effect": AssetType.EFFECT,
@@ -80,7 +81,20 @@ ASSET_TYPE_MAP = {
 
 @router.post("/api/generations")
 def create_generation(body: GenerationCreateBody, service: GenerationService = Depends(get_generation_service)):
-    asset_type = ASSET_TYPE_MAP.get(body.asset_type, AssetType.CHARACTER)
+    asset_type = ASSET_TYPE_MAP.get(body.asset_type)
+    if asset_type is None:
+        known = ", ".join(sorted(ASSET_TYPE_MAP.keys()))
+        return {
+            "success": False,
+            "task": {
+                "id": "",
+                "status": "failed",
+                "asset_id": None,
+                "preview_url": None,
+                "download_url": None,
+                "error_message": f"不支持的素材类型: {body.asset_type}，当前支持: {known}",
+            },
+        }
     from ...schemas.generation_schema import ExtraParams
 
     extra = None

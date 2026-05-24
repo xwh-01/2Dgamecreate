@@ -29,7 +29,7 @@ def list_project_assets(project_id: str, service: AssetService = Depends(get_ass
                 "download_url": f"/api/download/{a.id}",
                 "width": a.width,
                 "height": a.height,
-                "created_at": a.created_at.isoformat() if a.created_at else "",
+                "created_at": a.created_at if isinstance(a.created_at, str) else (a.created_at.isoformat() if a.created_at else ""),
                 "metadata": a.metadata or {},
             }
             for a in assets
@@ -55,7 +55,7 @@ def get_asset(asset_id: str, service: AssetService = Depends(get_asset_service))
             "download_url": f"/api/download/{asset.id}",
             "width": asset.width,
             "height": asset.height,
-            "created_at": asset.created_at.isoformat() if asset.created_at else "",
+            "created_at": asset.created_at if isinstance(asset.created_at, str) else (asset.created_at.isoformat() if asset.created_at else ""),
             "metadata": asset.metadata or {},
         },
     }

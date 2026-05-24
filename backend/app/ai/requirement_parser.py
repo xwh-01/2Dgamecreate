@@ -26,6 +26,19 @@ class ParsedRequirement:
     direction: Optional[str] = None
     background: Optional[str] = None
     usage: Optional[str] = None
+    name: Optional[str] = None
+    view: Optional[str] = None
+    action: Optional[str] = None
+    appearance: Optional[str] = None
+    weapon: Optional[str] = None
+    item_category: Optional[str] = None
+    tile_type: Optional[str] = None
+    material: Optional[str] = None
+    seamless: Optional[str] = None
+    icon_purpose: Optional[str] = None
+    shape: Optional[str] = None
+    effect_type: Optional[str] = None
+    motion_feeling: Optional[str] = None
 
     def to_dict(self) -> dict:
         return {
@@ -36,6 +49,19 @@ class ParsedRequirement:
             "direction": self.direction,
             "background": self.background,
             "usage": self.usage,
+            "name": self.name,
+            "view": self.view,
+            "action": self.action,
+            "appearance": self.appearance,
+            "weapon": self.weapon,
+            "item_category": self.item_category,
+            "tile_type": self.tile_type,
+            "material": self.material,
+            "seamless": self.seamless,
+            "icon_purpose": self.icon_purpose,
+            "shape": self.shape,
+            "effect_type": self.effect_type,
+            "motion_feeling": self.motion_feeling,
         }
 
 
@@ -59,13 +85,30 @@ Keep subject short, max 20 words. Do not include markdown or explanation."""
         )
 
         extra = input_data.extra_params or {}
-        if extra.get("direction"):
-            result.direction = extra["direction"]
-        if extra.get("background"):
-            result.background = extra["background"]
-        if extra.get("usage"):
-            result.usage = extra["usage"]
 
+        result.direction = extra.get("direction")
+        result.background = extra.get("background")
+        result.usage = extra.get("usage")
+        result.name = extra.get("name")
+        result.view = extra.get("view")
+        result.action = extra.get("action")
+        result.appearance = extra.get("appearance")
+        result.weapon = extra.get("weapon")
+        result.item_category = extra.get("item_category")
+        result.tile_type = extra.get("tile_type")
+        result.material = extra.get("material")
+        result.seamless = extra.get("seamless")
+        result.icon_purpose = extra.get("icon_purpose")
+        result.shape = extra.get("shape")
+        result.effect_type = extra.get("effect_type")
+        result.motion_feeling = extra.get("motion_feeling")
+
+        structured_subject = self._build_subject_from_structured(
+            input_data.asset_type, extra, input_data.user_input
+        )
+
+        ai_subject = ""
+        ai_style_hint = ""
         dk_key = settings.deepseek_api_key
 
         try:
@@ -87,8 +130,9 @@ Keep subject short, max 20 words. Do not include markdown or explanation."""
             )
             raw = response.choices[0].message.content.strip()
             parsed = json.loads(raw)
-            result.subject = parsed.get("subject", input_data.user_input[:50])
-            result.style_hint = parsed.get("style_hint", "")
+            ai_subject = parsed.get("subject", "")
+            ai_style_hint = parsed.get("style_hint", "")
+
             if not result.direction:
                 result.direction = parsed.get("direction")
             if not result.background:
@@ -96,8 +140,6 @@ Keep subject short, max 20 words. Do not include markdown or explanation."""
             if not result.usage:
                 result.usage = parsed.get("usage")
         except Exception:
-            result.subject = input_data.user_input[:50]
-            result.style_hint = ""
             if not result.direction:
                 result.direction = "front"
             if not result.background:
@@ -105,4 +147,88 @@ Keep subject short, max 20 words. Do not include markdown or explanation."""
             if not result.usage:
                 result.usage = "player_sprite"
 
+        if structured_subject:
+            result.subject = structured_subject
+        elif ai_subject:
+            result.subject = ai_subject
+        else:
+            result.subject = input_data.user_input[:50]
+
+        result.style_hint = ai_style_hint or extra.get("style_hint", "")
         return result
+
+    def _build_subject_from_structured(
+        self,
+        asset_type: Optional[AssetType],
+        extra: dict,
+        user_input: str,
+    ) -> str:
+        name = extra.get("name", "")
+        appearance = extra.get("appearance", "")
+        if not name and not appearance:
+            return ""
+
+        if asset_type in (AssetType.CHARACTER, AssetType.ENEMY):
+            view = extra.get("view", "")
+            action = extra.get("action", "")
+            weapon = extra.get("weapon", "")
+            parts = [name]
+            if view:
+                parts.append(f"{view} view")
+            if action:
+                parts.append(f"{action} pose")
+            if appearance:
+                parts.append(appearance)
+            if weapon:
+                parts.append(f"holding {weapon}")
+            return ", ".join(parts)
+
+        if asset_type == AssetType.PROP:
+            cat = extra.get("item_category", "")
+            if cat:
+                return f"{cat} {name}, {appearance}"
+            return f"{name}, {appearance}"
+
+        if asset_type == AssetType.TILE:
+            tile_type = extra.get("tile_type", "")
+            material = extra.get("material", "")
+            seamless = extra.get("seamless", "")
+            parts = []
+            if tile_type:
+                parts.append(tile_type)
+            parts.append("tile")
+            if material:
+                parts.append(material)
+            if seamless == "true":
+                parts.append("seamless repeatable")
+            return ", ".join(parts)
+
+        if asset_type == AssetType.UI_ICON:
+            purpose = extra.get("icon_purpose", "")
+            shape = extra.get("shape", "")
+            parts = []
+            if purpose:
+                parts.append(purpose)
+            parts.append("icon")
+            if name:
+                parts.append(name)
+            if shape and shape != "no_frame":
+                parts.append(f"{shape} shape")
+            if appearance:
+                parts.append(appearance)
+            return ", ".join(parts)
+
+        if asset_type == AssetType.EFFECT:
+            etype = extra.get("effect_type", "")
+            motion = extra.get("motion_feeling", "")
+            parts = []
+            if etype:
+                parts.append(etype)
+            parts.append("effect")
+            if name:
+                parts.append(name)
+            if motion:
+                parts.append(f"{motion} motion")
+            return ", ".join(parts)
+
+        return ""
