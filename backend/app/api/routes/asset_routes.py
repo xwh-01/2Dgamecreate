@@ -14,12 +14,14 @@ router = APIRouter(tags=["assets"])
 @router.get("/api/projects/{project_id}/assets")
 def list_project_assets(project_id: str, service: AssetService = Depends(get_asset_service)):
     assets = service.list_by_project(project_id)
+    assets = sorted(assets, key=lambda a: a.created_at or "", reverse=True)
     return {
         "success": True,
         "assets": [
             {
                 "id": a.id,
                 "project_id": a.project_id,
+                "task_id": a.task_id,
                 "name": a.name,
                 "asset_type": a.asset_type.value,
                 "file_path": a.file_path,
@@ -28,6 +30,7 @@ def list_project_assets(project_id: str, service: AssetService = Depends(get_ass
                 "width": a.width,
                 "height": a.height,
                 "created_at": a.created_at.isoformat() if a.created_at else "",
+                "metadata": a.metadata or {},
             }
             for a in assets
         ],
@@ -44,6 +47,7 @@ def get_asset(asset_id: str, service: AssetService = Depends(get_asset_service))
         "asset": {
             "id": asset.id,
             "project_id": asset.project_id,
+            "task_id": asset.task_id,
             "name": asset.name,
             "asset_type": asset.asset_type.value,
             "file_path": asset.file_path,
@@ -51,6 +55,8 @@ def get_asset(asset_id: str, service: AssetService = Depends(get_asset_service))
             "download_url": f"/api/download/{asset.id}",
             "width": asset.width,
             "height": asset.height,
+            "created_at": asset.created_at.isoformat() if asset.created_at else "",
+            "metadata": asset.metadata or {},
         },
     }
 

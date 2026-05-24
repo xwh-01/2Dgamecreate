@@ -4,6 +4,7 @@ from enum import Enum
 
 class AssetType(str, Enum):
     CHARACTER = "character"
+    ENEMY = "enemy"
     PROP = "prop"
     TILE = "tile"
     UI_ICON = "ui_icon"

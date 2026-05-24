@@ -12,6 +12,19 @@ class ExtraParams(BaseModel):
     direction: Optional[str] = None
     background: Optional[str] = None
     usage: Optional[str] = None
+    name: Optional[str] = None
+    view: Optional[str] = None
+    action: Optional[str] = None
+    appearance: Optional[str] = None
+    weapon: Optional[str] = None
+    item_category: Optional[str] = None
+    tile_type: Optional[str] = None
+    material: Optional[str] = None
+    seamless: Optional[str] = None
+    icon_purpose: Optional[str] = None
+    shape: Optional[str] = None
+    effect_type: Optional[str] = None
+    motion_feeling: Optional[str] = None
 
 
 class GenerationCreateRequest(BaseModel):

@@ -36,11 +36,12 @@ STYLE_RULES = {
 }
 
 ASSET_TYPE_RULES = {
-    AssetType.CHARACTER: "single 2D game character sprite, full body, centered, transparent background, clean readable silhouette, suitable for Unity Godot 2D game",
-    AssetType.PROP: "single 2D game item icon, centered, transparent background, no text, clean readable silhouette, game prop",
-    AssetType.TILE: "seamless 2D tile texture, repeatable, top-down view, suitable for tile map, no seams at edges",
-    AssetType.UI_ICON: "2D game UI icon, centered, transparent background, high contrast, no text, clean design",
-    AssetType.EFFECT: "2D game visual effect sprite, transparent background, centered, particle or energy effect style",
+    AssetType.CHARACTER: "single 2D game character sprite, full body, centered, transparent background, clean readable silhouette, suitable for Unity Godot 2D game, game-ready character, no background clutter, isolated on transparent",
+    AssetType.ENEMY: "single 2D game enemy sprite, full body, centered, transparent background, clean readable silhouette, suitable for Unity Godot 2D game, game-ready enemy character, no background clutter, isolated on transparent",
+    AssetType.PROP: "single 2D game item icon, centered, transparent background, no text, clean readable silhouette, game prop, inventory item, isolated on transparent",
+    AssetType.TILE: "2D game tile texture, top-down view, edge-matchable, no perspective distortion, suitable for tile map, game-ready tile",
+    AssetType.UI_ICON: "clean 2D game UI icon, centered, transparent background, high contrast, simple readable shape, clean design, game interface element",
+    AssetType.EFFECT: "2D game VFX sprite, transparent background, centered, high contrast, readable in game, particle or energy effect style, game visual effect frame, isolated on transparent",
 }
 
 DEFAULT_NEGATIVE = "text, watermark, logo, blurry, noisy background, realistic photo, 3D render, signature, artist name, complex background"

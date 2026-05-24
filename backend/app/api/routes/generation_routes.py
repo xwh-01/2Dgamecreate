@@ -12,10 +12,51 @@ from ...services.generation_service import GenerationService
 router = APIRouter(tags=["generations"])
 
 
+def _translate_error(error_message: str) -> str:
+    if not error_message:
+        return "未知错误"
+    msg = error_message.lower()
+    if "image provider is not configured" in msg or "not configured" in msg:
+        return "未配置图片生成 API Key，请在 .env 文件中设置 IMAGE_API_KEY"
+    if "tongyi wanxiang" in msg:
+        return "通义万象图片生成服务调用失败，请检查 API Key 是否正确"
+    if "openai" in msg and ("api" in msg or "auth" in msg):
+        return "OpenAI 服务认证失败，请检查 API Key 是否正确"
+    if "image generation failed" in msg or "generation failed" in msg:
+        return "图片生成服务调用失败，请稍后重试"
+    if "task not found" in msg:
+        return "生成任务不存在"
+    if "project not found" in msg:
+        return "项目不存在，请先创建项目"
+    if "style profile" in msg or "style_profile" in msg:
+        return "画风配置不存在，请先在画风配置标签页中配置画风"
+    if "rate" in msg or "quota" in msg or "billing" in msg:
+        return "API 额度不足或已达速率限制，请稍后重试"
+    if "content" in msg or "safety" in msg or "policy" in msg:
+        return "内容被安全策略拦截，请修改描述后重试"
+    if "unsupported" in msg:
+        return "不支持的图片生成服务商，请检查 IMAGE_PROVIDER 配置"
+    return error_message[:200] if len(error_message) > 200 else error_message
+
+
 class ExtraParamsModel(BaseModel):
     direction: Optional[str] = None
     background: Optional[str] = None
     usage: Optional[str] = None
+    # structured fields per asset type
+    name: Optional[str] = None
+    view: Optional[str] = None
+    action: Optional[str] = None
+    appearance: Optional[str] = None
+    weapon: Optional[str] = None
+    item_category: Optional[str] = None
+    tile_type: Optional[str] = None
+    material: Optional[str] = None
+    seamless: Optional[str] = None
+    icon_purpose: Optional[str] = None
+    shape: Optional[str] = None
+    effect_type: Optional[str] = None
+    motion_feeling: Optional[str] = None
 
 
 class GenerationCreateBody(BaseModel):
@@ -29,9 +70,11 @@ class GenerationCreateBody(BaseModel):
 
 ASSET_TYPE_MAP = {
     "character": AssetType.CHARACTER,
+    "enemy": AssetType.ENEMY,
     "item": AssetType.PROP,
     "tile": AssetType.TILE,
     "ui_icon": AssetType.UI_ICON,
+    "effect": AssetType.EFFECT,
 }
 
 
@@ -46,6 +89,19 @@ def create_generation(body: GenerationCreateBody, service: GenerationService = D
             direction=body.extra_params.direction,
             background=body.extra_params.background,
             usage=body.extra_params.usage,
+            name=body.extra_params.name,
+            view=body.extra_params.view,
+            action=body.extra_params.action,
+            appearance=body.extra_params.appearance,
+            weapon=body.extra_params.weapon,
+            item_category=body.extra_params.item_category,
+            tile_type=body.extra_params.tile_type,
+            material=body.extra_params.material,
+            seamless=body.extra_params.seamless,
+            icon_purpose=body.extra_params.icon_purpose,
+            shape=body.extra_params.shape,
+            effect_type=body.extra_params.effect_type,
+            motion_feeling=body.extra_params.motion_feeling,
         )
 
     request = GenerationCreateRequest(
@@ -62,6 +118,7 @@ def create_generation(body: GenerationCreateBody, service: GenerationService = D
     try:
         ctx = service.run_task(task.id)
     except Exception as e:
+        raw_error = str(e)
         return {
             "success": False,
             "task": {
@@ -70,7 +127,7 @@ def create_generation(body: GenerationCreateBody, service: GenerationService = D
                 "asset_id": None,
                 "preview_url": None,
                 "download_url": None,
-                "error_message": str(e),
+                "error_message": _translate_error(raw_error),
             },
         }
 
@@ -89,6 +146,7 @@ def create_generation(body: GenerationCreateBody, service: GenerationService = D
             },
         }
     else:
+        raw_error = ctx.error_message or "未知错误"
         return {
             "success": False,
             "task": {
@@ -97,7 +155,7 @@ def create_generation(body: GenerationCreateBody, service: GenerationService = D
                 "asset_id": None,
                 "preview_url": None,
                 "download_url": None,
-                "error_message": ctx.error_message or "Unknown error",
+                "error_message": _translate_error(raw_error),
             },
         }
 
