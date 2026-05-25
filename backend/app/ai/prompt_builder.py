@@ -17,113 +17,65 @@ class PromptPackage:
 
     def to_full_prompt(self) -> str:
         sections = [
-            self.base_prompt,
-            self.asset_type_rules,
-            self.style_profile_rules,
-            self.technical_rules,
-            self.engine_compatibility_rules,
+            ("Subject", self.base_prompt),
+            ("Composition", self.asset_type_rules),
+            ("Style", self.style_profile_rules),
+            ("Technical", self.technical_rules),
+            ("Negative constraints", self.negative_prompt),
+            ("Engine compatibility", self.engine_compatibility_rules),
         ]
-        return ", ".join(s for s in sections if s)
+        return "\n".join(f"{title}: {body}" for title, body in sections if body)
 
     def to_full_negative_prompt(self) -> str:
         return self.negative_prompt
 
 
-CHARACTER_TEMPLATE = (
-    "single subject only, {view}{pose}{emotion}{appearance}{weapon}"
-    "full body from head to toe, centered in frame, "
-    "transparent alpha background, no background scene, "
-    "subject occupies {canvas_fill} of canvas, "
-    "no white rectangle, no white box, no border, no frame, "
-    "clean readable silhouette, game character sprite, "
-    "2D game art style, {complexity} detail level, "
-    "{body_ratio}{color_palette}{outline_style}"
-    "ready for Unity Godot 2D sprite import"
-)
-
-ENEMY_TEMPLATE = (
-    "single subject only, {view}{pose}{emotion}{appearance}{weapon}"
-    "full body from head to toe, centered in frame, "
-    "transparent alpha background, no background scene, "
-    "subject occupies {canvas_fill} of canvas, "
-    "no white rectangle, no white box, no border, no frame, "
-    "clean readable silhouette, game enemy sprite, "
-    "2D game art style, {complexity} detail level, "
-    "{body_ratio}{color_palette}{outline_style}"
-    "ready for Unity Godot 2D sprite import"
-)
-
-PROP_TEMPLATE = (
-    "single item only, {view}{name}{appearance}{item_category}"
-    "centered in frame, transparent alpha background, "
-    "no background scene, no shadow on ground, "
-    "subject occupies {canvas_fill} of canvas, "
-    "clean readable silhouette, game item prop, "
-    "2D game art style, {complexity} detail level, "
-    "{color_palette}{outline_style}"
-    "inventory-ready icon"
-)
-
-TILE_TEMPLATE = (
-    "single tile texture, {view}{name}{tile_type}{material}"
-    "top-down orthographic view, no perspective distortion, "
-    "edge-matchable pattern, {seamless} "
-    "2D game tile map texture, {complexity} detail level, "
-    "{color_palette}{outline_style}"
-    "ready for tile-based 2D game engine"
-)
-
-UI_ICON_TEMPLATE = (
-    "single UI icon, {name}{icon_purpose}{appearance}{shape}"
-    "centered in frame, transparent alpha background, "
-    "high contrast, simple readable shape, "
-    "subject occupies {canvas_fill} of canvas, "
-    "clean minimal design, 2D game interface element, "
-    "{color_palette}{outline_style}"
-    "ready for Unity Godot UI sprite import"
-)
-
-EFFECT_TEMPLATE = (
-    "single VFX sprite frame, {name}{effect_type}{motion_feeling}"
-    "centered in frame, transparent alpha background, "
-    "high contrast, visible against dark and light game backgrounds, "
-    "subject occupies {canvas_fill} of canvas, "
-    "2D game visual effect, particle or energy style, "
-    "{color_palette}{outline_style}"
-    "game-ready sprite sheet frame"
-)
-
-
 STYLE_RULES = {
     "pixel_art": (
-        "pixel art sprite, hard pixel edges, low-resolution game asset, limited color palette, "
-        "clean dark outline, simple readable silhouette, readable at 64x64 or 128x128, "
-        "no smooth gradients, no soft 3D lighting, no anti-aliasing, crisp pixel edges, "
-        "suitable for Unity 2D sprite, pixelated shading only, flat 2D game art"
+        "pixel art sprite, crisp hard pixel edges, limited palette, no anti-aliasing, "
+        "readable at small sizes, flat pixel shading"
     ),
     "cartoon": (
-        "cute stylized 2D game sprite, simple rounded shapes, clean outline, readable silhouette, "
-        "flat shading, cel shading, animated style, no 3D toy-like rendering, no plastic look, "
-        "no soft realistic lighting, 2D flat cartoon style"
+        "stylized 2D cartoon game art, clean outline, flat or cel shading, simple shapes, "
+        "no toy-like 3D render"
     ),
     "hand_drawn": (
-        "hand drawn style, sketchy lines, artistic, illustration, traditional media, "
-        "2D game art, no 3D rendering, no smooth gradients"
+        "hand drawn 2D game art, expressive line work, readable silhouette, no 3D render"
     ),
 }
 
-DEFAULT_NEGATIVE = (
-    "text, watermark, logo, signature, artist name, "
-    "white background, white square, white rectangle, white box, white frame, "
-    "border, frame, cropped body, partial body, cut off body, "
-    "tiny character, small subject, far away, zoomed out, "
-    "multiple characters, multiple subjects, group, crowd, "
-    "environment background, complex scene, landscape, room, scenery, "
-    "realistic photo, realistic render, 3D render, 3d model, "
-    "plastic toy, toy-like rendering, smooth gradient, soft realistic lighting, "
-    "realistic texture, ground shadow, floating gray background, fuzzy edges, "
-    "blurry, noisy background, messy details, extra limbs, six fingers"
-)
+DEFAULT_NEGATIVE = [
+    "text",
+    "watermark",
+    "logo",
+    "signature",
+    "artist name",
+    "white background",
+    "white square",
+    "white rectangle",
+    "white box",
+    "border",
+    "frame",
+    "cropped body",
+    "cut off body",
+    "tiny subject",
+    "multiple subjects",
+    "group",
+    "crowd",
+    "environment background",
+    "complex scene",
+    "landscape",
+    "room",
+    "realistic photo",
+    "3D render",
+    "3d model",
+    "plastic toy",
+    "smooth gradient",
+    "soft realistic lighting",
+    "ground shadow",
+    "blurry",
+    "messy details",
+]
 
 
 class PromptBuilder:
@@ -133,228 +85,263 @@ class PromptBuilder:
         style_profile: Optional[dict] = None,
     ) -> PromptPackage:
         pkg = PromptPackage()
-        pkg.base_prompt = self._build_base_prompt(parsed, style_profile)
-        pkg.asset_type_rules = self._get_asset_type_rules(parsed)
-        pkg.style_profile_rules = self._get_style_profile_rules(style_profile)
-        pkg.technical_rules = self._get_technical_rules(parsed)
-        pkg.engine_compatibility_rules = self._get_engine_rules()
+        pkg.base_prompt = self._build_subject_section(parsed)
+        pkg.asset_type_rules = self._build_composition_section(parsed)
+        pkg.style_profile_rules = self._build_style_section(parsed, style_profile)
+        pkg.technical_rules = self._build_technical_section(parsed)
+        pkg.engine_compatibility_rules = self._get_engine_rules(parsed)
         pkg.negative_prompt = self._get_negative_prompt(style_profile, parsed)
         return pkg
 
-    def _is_slime(self, parsed: ParsedRequirement) -> bool:
-        if parsed.asset_type != AssetType.ENEMY:
-            return False
-        text = (parsed.subject + " " + (parsed.name or "") + " " + (parsed.appearance or "")).lower()
-        return any(kw in text for kw in ("slime", "slime", "圆滚滚", "slime enemy", "blob"))
+    def _build_subject_section(self, parsed: ParsedRequirement) -> str:
+        asset_type = parsed.asset_type or AssetType.CHARACTER
+        values = {
+            "asset_type": self._asset_type_label(asset_type),
+            "name": parsed.name,
+            "subject": parsed.subject,
+            "appearance": parsed.appearance,
+            "item_category": parsed.item_category,
+            "tile_type": parsed.tile_type,
+            "material": parsed.material,
+            "icon_purpose": parsed.icon_purpose,
+            "effect_type": parsed.effect_type,
+            "weapon": f"holding {parsed.weapon}" if parsed.weapon else None,
+            "emotion": f"{parsed.emotion} expression" if parsed.emotion else None,
+            "pose": self._pose_text(parsed),
+            "action": f"action: {parsed.action}" if parsed.action else None,
+            "animation_frame": parsed.animation_frame,
+            "motion_feeling": (
+                f"{parsed.motion_feeling} motion" if parsed.motion_feeling else None
+            ),
+        }
 
-    def _replace_vars(self, template: str, vars: dict) -> str:
-        result = template
-        for key, value in vars.items():
-            placeholder = "{" + key + "}"
-            if value:
-                result = result.replace(placeholder, str(value) + " ")
+        if asset_type == AssetType.ENEMY:
+            values["role"] = (
+                "hostile creature, enemy sprite, attack-ready game opponent"
+            )
+        elif asset_type == AssetType.CHARACTER:
+            values["role"] = "player or NPC character sprite"
+        elif asset_type == AssetType.PROP:
+            values["role"] = "single usable game item or prop"
+        elif asset_type == AssetType.TILE:
+            values["role"] = "single 2D tile texture"
+        elif asset_type == AssetType.UI_ICON:
+            values["role"] = "single game UI icon"
+        elif asset_type == AssetType.EFFECT:
+            values["role"] = "single visual effect sprite frame"
+
+        if self._is_slime_enemy(parsed):
+            values["role"] = "slime enemy sprite, round blob body, simple face"
+            if not parsed.pose and not parsed.action:
+                values["pose"] = "idle bouncing pose"
+
+        return self._join_values(values)
+
+    def _build_composition_section(self, parsed: ParsedRequirement) -> str:
+        asset_type = parsed.asset_type or AssetType.CHARACTER
+        rules = [
+            "single asset only",
+            "centered in frame",
+            "isolated on transparent background",
+            "no complex scene",
+        ]
+
+        if asset_type == AssetType.ENEMY:
+            rules.extend(
+                [
+                    "full body from head to toe",
+                    "hostile creature",
+                    "enemy sprite",
+                    "readable silhouette",
+                    "attack-ready pose",
+                    "suitable for RPG, platformer, or roguelike game",
+                ]
+            )
+            if self._is_slime_enemy(parsed):
+                rules.append("round blob silhouette")
+        elif asset_type == AssetType.CHARACTER:
+            rules.extend(
+                [
+                    "full body from head to toe",
+                    "game character sprite",
+                    "readable silhouette",
+                ]
+            )
+        elif asset_type == AssetType.PROP:
+            rules.extend(["single item only", "inventory-ready item icon"])
+        elif asset_type == AssetType.TILE:
+            rules.extend(["top-down orthographic tile", "edge-matchable pattern"])
+            if self._is_true(parsed.seamless):
+                rules.append("seamless repeatable texture")
+        elif asset_type == AssetType.UI_ICON:
+            rules.extend(["high contrast icon", "simple readable shape"])
+            if parsed.shape and parsed.shape != "no_frame":
+                rules.append(f"{parsed.shape} icon shape")
             else:
-                result = result.replace(placeholder, "")
-        return " ".join(result.split())
+                rules.append("no decorative frame")
+        elif asset_type == AssetType.EFFECT:
+            rules.extend(
+                [
+                    "transparent VFX element",
+                    "visible on dark and light game backgrounds",
+                ]
+            )
 
-    def _build_character_vars(self, parsed: ParsedRequirement) -> dict:
-        name = parsed.name or parsed.subject or ""
-        view = f"{parsed.view} view, " if parsed.view else "front view, "
-        pose = f"{parsed.pose} pose, " if parsed.pose else ""
-        emotion = f"{parsed.emotion} expression, " if parsed.emotion else ""
-        appearance = f"{parsed.appearance}, " if parsed.appearance else ""
-        weapon = f"holding {parsed.weapon}, " if parsed.weapon else ""
-        canvas_fill = parsed.canvas_fill or "75%"
-        complexity = parsed.complexity or "medium"
-        body_ratio = f"{parsed.body_ratio} proportion, " if parsed.body_ratio else ""
-        color_palette = f"{parsed.color_palette} palette, " if parsed.color_palette else ""
-        outline_style = f"{parsed.outline_style} outline, " if parsed.outline_style else "clean outline, "
-        return {
-            "name": name,
-            "view": view,
-            "pose": pose,
-            "emotion": emotion,
-            "appearance": appearance,
-            "weapon": weapon,
-            "canvas_fill": canvas_fill,
-            "complexity": complexity,
-            "body_ratio": body_ratio,
-            "color_palette": color_palette,
-            "outline_style": outline_style,
-        }
-
-    def _build_prop_vars(self, parsed: ParsedRequirement) -> dict:
-        name = parsed.name or parsed.subject or ""
-        item_category = f"{parsed.item_category}, " if parsed.item_category else ""
-        appearance = f"{parsed.appearance}, " if parsed.appearance else ""
-        view = f"{parsed.view} view, " if parsed.view else ""
-        canvas_fill = parsed.canvas_fill or "75%"
-        complexity = parsed.complexity or "medium"
-        color_palette = f"{parsed.color_palette} palette, " if parsed.color_palette else ""
-        outline_style = f"{parsed.outline_style} outline, " if parsed.outline_style else "clean outline, "
-        return {
-            "name": name,
-            "item_category": item_category,
-            "appearance": appearance,
-            "view": view,
-            "canvas_fill": canvas_fill,
-            "complexity": complexity,
-            "color_palette": color_palette,
-            "outline_style": outline_style,
-        }
-
-    def _build_tile_vars(self, parsed: ParsedRequirement) -> dict:
-        name = parsed.name or parsed.subject or ""
-        tile_type = f"{parsed.tile_type}, " if parsed.tile_type else ""
-        material = f"{parsed.material} material, " if parsed.material else ""
-        view = "top-down view, "
-        seamless = "seamless repeatable, " if parsed.seamless == "true" else ""
-        complexity = parsed.complexity or "medium"
-        color_palette = f"{parsed.color_palette} palette, " if parsed.color_palette else ""
-        outline_style = f"{parsed.outline_style} outline, " if parsed.outline_style else ""
-        return {
-            "name": name,
-            "tile_type": tile_type,
-            "material": material,
-            "view": view,
-            "seamless": seamless,
-            "complexity": complexity,
-            "color_palette": color_palette,
-            "outline_style": outline_style,
-        }
-
-    def _build_ui_icon_vars(self, parsed: ParsedRequirement) -> dict:
-        name = parsed.name or parsed.subject or ""
-        icon_purpose = f"{parsed.icon_purpose}, " if parsed.icon_purpose else ""
-        appearance = f"{parsed.appearance}, " if parsed.appearance else ""
-        shape = f"{parsed.shape} shape, " if parsed.shape and parsed.shape != "no_frame" else ""
-        canvas_fill = parsed.canvas_fill or "75%"
-        color_palette = f"{parsed.color_palette} palette, " if parsed.color_palette else ""
-        outline_style = f"{parsed.outline_style} outline, " if parsed.outline_style else "clean outline, "
-        return {
-            "name": name,
-            "icon_purpose": icon_purpose,
-            "appearance": appearance,
-            "shape": shape,
-            "canvas_fill": canvas_fill,
-            "color_palette": color_palette,
-            "outline_style": outline_style,
-        }
-
-    def _build_effect_vars(self, parsed: ParsedRequirement) -> dict:
-        name = parsed.name or parsed.subject or ""
-        effect_type = f"{parsed.effect_type}, " if parsed.effect_type else ""
-        motion_feeling = f"{parsed.motion_feeling} motion, " if parsed.motion_feeling else ""
-        canvas_fill = parsed.canvas_fill or "75%"
-        color_palette = f"{parsed.color_palette} palette, " if parsed.color_palette else ""
-        outline_style = f"{parsed.outline_style} outline, " if parsed.outline_style else ""
-        return {
-            "name": name,
-            "effect_type": effect_type,
-            "motion_feeling": motion_feeling,
-            "canvas_fill": canvas_fill,
-            "color_palette": color_palette,
-            "outline_style": outline_style,
-        }
-
-    def _build_base_prompt(self, parsed: ParsedRequirement, style_profile: Optional[dict] = None) -> str:
-        asset_type = parsed.asset_type
-
-        if asset_type in (AssetType.CHARACTER, AssetType.ENEMY):
-            template = CHARACTER_TEMPLATE if asset_type == AssetType.CHARACTER else ENEMY_TEMPLATE
-            is_sl = self._is_slime(parsed)
-            vars_ = self._build_character_vars(parsed)
-            if is_sl:
-                vars_["appearance"] = "round blob body, simple face, "
-                if "idle" in (vars_.get("pose", "")).lower():
-                    vars_["pose"] = "idle bouncing pose, "
-            return self._replace_vars(template, vars_)
-        if asset_type == AssetType.PROP:
-            return self._replace_vars(PROP_TEMPLATE, self._build_prop_vars(parsed))
-        if asset_type == AssetType.TILE:
-            return self._replace_vars(TILE_TEMPLATE, self._build_tile_vars(parsed))
-        if asset_type == AssetType.UI_ICON:
-            return self._replace_vars(UI_ICON_TEMPLATE, self._build_ui_icon_vars(parsed))
-        if asset_type == AssetType.EFFECT:
-            return self._replace_vars(EFFECT_TEMPLATE, self._build_effect_vars(parsed))
-
-        parts = [parsed.subject]
+        if parsed.camera_angle:
+            rules.append(f"camera angle: {parsed.camera_angle}")
         if parsed.view:
-            parts.append(f"{parsed.view} view")
+            rules.append(f"view: {parsed.view}")
         if parsed.direction:
-            parts.append(f"facing {parsed.direction}")
-        return " ".join(parts)
+            rules.append(f"facing {parsed.direction}")
+        if parsed.body_ratio:
+            rules.append(f"{parsed.body_ratio} body ratio")
+        if parsed.canvas_fill:
+            rules.append(f"subject fills about {parsed.canvas_fill} of the canvas")
 
-    def _get_asset_type_rules(self, parsed: ParsedRequirement) -> str:
+        return ", ".join(self._dedupe(rules))
+
+    def _build_style_section(
+        self, parsed: ParsedRequirement, style_profile: Optional[dict]
+    ) -> str:
+        parts = [
+            "2D game art",
+            "game-ready sprite",
+            parsed.style_hint,
+            f"{parsed.complexity} detail level" if parsed.complexity else None,
+            f"{parsed.color_palette} color palette" if parsed.color_palette else None,
+            f"{parsed.outline_style} outline" if parsed.outline_style else None,
+        ]
+
+        if style_profile:
+            art_style = style_profile.get("art_style", "")
+            parts.append(STYLE_RULES.get(art_style, ""))
+            parts.append(style_profile.get("prompt_rules", ""))
+            if style_profile.get("default_size"):
+                parts.append(f"default sprite size {style_profile['default_size']}")
+
         asset_type = parsed.asset_type or AssetType.CHARACTER
         if asset_type in (AssetType.CHARACTER, AssetType.ENEMY):
-            return (
-                "single 2D game character sprite, full body, centered, "
-                "transparent background, clean readable silhouette, "
-                "suitable for Unity Godot 2D game, game-ready character, "
-                "no background clutter, isolated on transparent"
-            )
-        if asset_type == AssetType.PROP:
-            return (
-                "single 2D game item icon, centered, transparent background, "
-                "no text, clean readable silhouette, game prop, inventory item, "
-                "isolated on transparent"
-            )
-        if asset_type == AssetType.TILE:
-            base = (
-                "2D game tile texture, top-down view, edge-matchable, "
-                "no perspective distortion, suitable for tile map, game-ready tile"
-            )
-            if parsed.seamless == "true":
-                base = base + ", seamless repeatable, edge-matchable"
-            return base
+            parts.append("clean readable silhouette")
         if asset_type == AssetType.UI_ICON:
-            return (
-                "clean 2D game UI icon, centered, transparent background, "
-                "high contrast, simple readable shape, clean design, "
-                "game interface element"
-            )
-        if asset_type == AssetType.EFFECT:
-            return (
-                "2D game VFX sprite, transparent background, centered, "
-                "high contrast, readable in game, particle or energy effect style, "
-                "game visual effect frame, isolated on transparent"
-            )
-        return ""
+            parts.append("simple interface-ready design")
+        if asset_type == AssetType.TILE:
+            parts.append("tilemap-ready texture")
 
-    def _get_style_profile_rules(self, style_profile: Optional[dict]) -> str:
-        if style_profile is None:
-            return ""
-        art_style = style_profile.get("art_style", "")
-        rules = STYLE_RULES.get(art_style, "")
-        custom = style_profile.get("prompt_rules", "")
-        if custom:
-            rules = f"{rules}, {custom}"
-        size = style_profile.get("default_size", "")
-        if size:
-            rules = f"{rules}, {size}"
-        return rules
+        return ", ".join(self._dedupe(self._clean_list(parts)))
 
-    def _get_technical_rules(self, parsed: ParsedRequirement) -> str:
-        parts = []
-        if parsed.size:
-            parts.append(parsed.size)
+    def _build_technical_section(self, parsed: ParsedRequirement) -> str:
         bg = parsed.background or "transparent"
-        if bg == "transparent":
-            parts.append("transparent background, alpha channel")
-        else:
-            parts.append(f"{bg} background")
-        parts.append("game-ready sprite sheet compatible")
+        parts = [
+            parsed.size,
+            "transparent background with alpha channel"
+            if bg == "transparent"
+            else f"{bg} background",
+            "no text",
+            "no watermark",
+            "no white box",
+            "no border or frame",
+            "game-ready sprite",
+            "clean alpha edges",
+        ]
+        if parsed.animation_frame:
+            parts.append(f"animation frame: {parsed.animation_frame}")
+        return ", ".join(self._dedupe(self._clean_list(parts)))
+
+    def _get_engine_rules(self, parsed: ParsedRequirement) -> str:
+        asset_type = parsed.asset_type or AssetType.CHARACTER
+        parts = [
+            "ready for Unity or Godot 2D import",
+            "centered pivot",
+            "consistent sprite scale",
+            "no baked ground shadow",
+        ]
+        if asset_type == AssetType.TILE:
+            parts.append("ready for tilemap import")
+        if asset_type == AssetType.UI_ICON:
+            parts.append("ready for UI atlas import")
         return ", ".join(parts)
 
-    def _get_engine_rules(self) -> str:
-        return "pixel perfect, centered pivot, no shadow, isolated on transparent, ready for Unity Godot sprite import"
-
-    def _get_negative_prompt(self, style_profile: Optional[dict], parsed: ParsedRequirement) -> str:
-        neg = DEFAULT_NEGATIVE
-        for el in parsed.forbidden_elements:
-            if el and el not in neg:
-                neg = f"{neg}, {el}"
+    def _get_negative_prompt(
+        self, style_profile: Optional[dict], parsed: ParsedRequirement
+    ) -> str:
+        items = list(DEFAULT_NEGATIVE)
+        items.extend(parsed.forbidden_elements or [])
         if style_profile and style_profile.get("negative_prompt_rules"):
-            neg = f"{neg}, {style_profile['negative_prompt_rules']}"
-        return neg
+            items.extend(self._split_negative(style_profile["negative_prompt_rules"]))
+        return ", ".join(self._dedupe(self._clean_list(items)))
+
+    def _pose_text(self, parsed: ParsedRequirement) -> Optional[str]:
+        pose = parsed.pose or parsed.action
+        if parsed.asset_type == AssetType.ENEMY and not pose:
+            pose = "attack-ready"
+        if pose:
+            return f"{pose} pose"
+        return None
+
+    def _asset_type_label(self, asset_type: AssetType) -> str:
+        labels = {
+            AssetType.CHARACTER: "character",
+            AssetType.ENEMY: "enemy",
+            AssetType.PROP: "prop",
+            AssetType.TILE: "tile",
+            AssetType.UI_ICON: "ui icon",
+            AssetType.EFFECT: "effect",
+        }
+        return labels.get(asset_type, "asset")
+
+    def _join_values(self, values: dict) -> str:
+        preferred = [
+            "asset_type",
+            "role",
+            "name",
+            "subject",
+            "item_category",
+            "tile_type",
+            "material",
+            "icon_purpose",
+            "effect_type",
+            "appearance",
+            "pose",
+            "action",
+            "emotion",
+            "weapon",
+            "motion_feeling",
+            "animation_frame",
+        ]
+        parts = [values.get(key) for key in preferred]
+        return ", ".join(self._dedupe(self._clean_list(parts)))
+
+    def _clean_list(self, values: list) -> list[str]:
+        clean = []
+        for value in values:
+            if value is None:
+                continue
+            text = str(value).strip(" ,")
+            if text:
+                clean.append(text)
+        return clean
+
+    def _dedupe(self, values: list[str]) -> list[str]:
+        seen = set()
+        result = []
+        for value in values:
+            key = value.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(value)
+        return result
+
+    def _split_negative(self, text: str) -> list[str]:
+        return [part.strip() for part in text.split(",") if part.strip()]
+
+    def _is_true(self, value: Optional[str]) -> bool:
+        return str(value).lower() in ("1", "true", "yes", "y")
+
+    def _is_slime_enemy(self, parsed: ParsedRequirement) -> bool:
+        if parsed.asset_type != AssetType.ENEMY:
+            return False
+        text = " ".join(
+            self._clean_list([parsed.subject, parsed.name, parsed.appearance])
+        ).lower()
+        return any(keyword in text for keyword in ("slime", "blob", "史莱姆"))

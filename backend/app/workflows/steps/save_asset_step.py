@@ -50,6 +50,7 @@ class SaveAssetStep:
             metadata={
                 "description": description,
                 "final_prompt": ctx.prompt_package.to_full_prompt() if ctx.prompt_package else "",
+                "parsed_requirement": ctx.parsed_requirement.to_dict() if ctx.parsed_requirement else {},
                 "art_style": ctx.style_profile.art_style.value if ctx.style_profile else "",
                 "size": ctx.task.size if ctx.task else "",
                 "created_at": now.isoformat(),

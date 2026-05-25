@@ -1,5 +1,6 @@
 # Image processing utilities (crop, resize, format conversion, sprite normalization)
 import io
+from collections import Counter, deque
 from typing import Optional
 
 from PIL import Image
@@ -81,6 +82,89 @@ def remove_near_white_background(image_bytes: bytes, threshold: int = 245) -> by
     return encode_png(img)
 
 
+def remove_uniform_edge_background(
+    image_bytes: bytes,
+    color_tolerance: int = 24,
+    min_edge_ratio: float = 0.35,
+) -> bytes:
+    img = image_bytes_to_rgba(image_bytes)
+    if img is None:
+        return image_bytes
+
+    width, height = img.size
+    if width <= 2 or height <= 2:
+        return encode_png(img)
+
+    pixels = img.load()
+    edge_points = []
+    for x in range(width):
+        edge_points.append((x, 0))
+        edge_points.append((x, height - 1))
+    for y in range(1, height - 1):
+        edge_points.append((0, y))
+        edge_points.append((width - 1, y))
+
+    opaque_edge_colors = []
+    for x, y in edge_points:
+        r, g, b, a = pixels[x, y]
+        if a > 0:
+            opaque_edge_colors.append((r, g, b))
+
+    if not opaque_edge_colors:
+        return encode_png(img)
+
+    quantized = Counter(
+        (r // 16 * 16, g // 16 * 16, b // 16 * 16)
+        for r, g, b in opaque_edge_colors
+    )
+    dominant_bucket, count = quantized.most_common(1)[0]
+    if count / len(opaque_edge_colors) < min_edge_ratio:
+        return encode_png(img)
+
+    bucket_colors = [
+        color
+        for color in opaque_edge_colors
+        if (
+            color[0] // 16 * 16,
+            color[1] // 16 * 16,
+            color[2] // 16 * 16,
+        )
+        == dominant_bucket
+    ]
+    bg_color = tuple(
+        int(sum(color[i] for color in bucket_colors) / len(bucket_colors))
+        for i in range(3)
+    )
+
+    def close_to_background(x: int, y: int) -> bool:
+        r, g, b, a = pixels[x, y]
+        if a == 0:
+            return True
+        return max(abs(r - bg_color[0]), abs(g - bg_color[1]), abs(b - bg_color[2])) <= color_tolerance
+
+    visited = set()
+    queue = deque()
+    for point in edge_points:
+        if close_to_background(*point):
+            queue.append(point)
+            visited.add(point)
+
+    while queue:
+        x, y = queue.popleft()
+        r, g, b, _ = pixels[x, y]
+        pixels[x, y] = (r, g, b, 0)
+        for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+            if nx < 0 or ny < 0 or nx >= width or ny >= height:
+                continue
+            if (nx, ny) in visited:
+                continue
+            if close_to_background(nx, ny):
+                visited.add((nx, ny))
+                queue.append((nx, ny))
+
+    return encode_png(img)
+
+
 def trim_transparent_padding(image_bytes: bytes, padding_ratio: float = 0.08) -> bytes:
     img = image_bytes_to_rgba(image_bytes)
     if img is None:
@@ -149,6 +233,7 @@ def fit_subject_to_canvas(
 
 def normalize_sprite_canvas(image_bytes: bytes, output_size: str) -> bytes:
     result = remove_near_white_background(image_bytes)
+    result = remove_uniform_edge_background(result)
     result = trim_transparent_padding(result, padding_ratio=0.08)
     result = fit_subject_to_canvas(result, output_size)
     return result

@@ -7,6 +7,7 @@ class PathBuilder:
 
     ASSET_TYPE_DIR: dict[AssetType, str] = {
         AssetType.CHARACTER: "characters",
+        AssetType.ENEMY: "enemies",
         AssetType.PROP: "items",
         AssetType.TILE: "tiles",
         AssetType.UI_ICON: "ui_icons",

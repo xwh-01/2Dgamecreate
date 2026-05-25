@@ -43,7 +43,6 @@ class ExtraParamsModel(BaseModel):
     direction: Optional[str] = None
     background: Optional[str] = None
     usage: Optional[str] = None
-    # structured fields per asset type
     name: Optional[str] = None
     view: Optional[str] = None
     action: Optional[str] = None
@@ -57,6 +56,16 @@ class ExtraParamsModel(BaseModel):
     shape: Optional[str] = None
     effect_type: Optional[str] = None
     motion_feeling: Optional[str] = None
+    pose: Optional[str] = None
+    camera_angle: Optional[str] = None
+    body_ratio: Optional[str] = None
+    canvas_fill: Optional[str] = None
+    outline_style: Optional[str] = None
+    color_palette: Optional[str] = None
+    emotion: Optional[str] = None
+    complexity: Optional[str] = None
+    animation_frame: Optional[str] = None
+    forbidden_elements: Optional[list[str]] = None
 
 
 class GenerationCreateBody(BaseModel):
@@ -99,24 +108,7 @@ def create_generation(body: GenerationCreateBody, service: GenerationService = D
 
     extra = None
     if body.extra_params:
-        extra = ExtraParams(
-            direction=body.extra_params.direction,
-            background=body.extra_params.background,
-            usage=body.extra_params.usage,
-            name=body.extra_params.name,
-            view=body.extra_params.view,
-            action=body.extra_params.action,
-            appearance=body.extra_params.appearance,
-            weapon=body.extra_params.weapon,
-            item_category=body.extra_params.item_category,
-            tile_type=body.extra_params.tile_type,
-            material=body.extra_params.material,
-            seamless=body.extra_params.seamless,
-            icon_purpose=body.extra_params.icon_purpose,
-            shape=body.extra_params.shape,
-            effect_type=body.extra_params.effect_type,
-            motion_feeling=body.extra_params.motion_feeling,
-        )
+        extra = ExtraParams(**body.extra_params.model_dump())
 
     request = GenerationCreateRequest(
         project_id=body.project_id,
@@ -157,6 +149,8 @@ def create_generation(body: GenerationCreateBody, service: GenerationService = D
                 "preview_url": preview_url,
                 "download_url": download_url,
                 "error_message": None,
+                "quality_result": ctx.quality_result.to_dict() if ctx.quality_result else None,
+                "checks": [c.to_dict() for c in ctx.quality_result.checks] if ctx.quality_result else [],
             },
         }
     else:

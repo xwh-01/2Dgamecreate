@@ -38,5 +38,14 @@ class FileStorage:
 
     def ensure_type_dirs(self, project_id: str):
         project_dir = self._full_path(f"generated_assets/project_{project_id}")
-        for dir_name in ["characters", "items", "tiles", "ui_icons", "effects", "metadata", "exports"]:
+        for dir_name in [
+            "characters",
+            "enemies",
+            "items",
+            "tiles",
+            "ui_icons",
+            "effects",
+            "metadata",
+            "exports",
+        ]:
             os.makedirs(os.path.join(project_dir, dir_name), exist_ok=True)
