@@ -63,6 +63,93 @@ image provider is not configured
 
 This is intentional. The tool requires a real AI image generation API to produce assets. No mock or placeholder images are used.
 
+## Structured asset controls
+
+The requirement parser now extracts fine-grained control fields from user descriptions, giving you precise control over generated sprites:
+
+| Field | Description | Suggested values |
+|-------|-------------|-----------------|
+| `pose` | Character stance | `idle`, `walking`, `attacking`, `casting`, `hurt`, `dead` |
+| `camera_angle` | Viewpoint direction | `front`, `side`, `back`, `three-quarter`, `top-down` |
+| `body_ratio` | Body proportions | `chibi`, `realistic`, `1:1`, `1:2` |
+| `canvas_fill` | Subject fill ratio | `60%`, `75%`, `85%` |
+| `outline_style` | Line art style | `clean`, `sketchy`, `none`, `thick`, `thin` |
+| `color_palette` | Color scheme | `pastel`, `dark`, `vibrant`, `monochrome`, `warm`, `cool` |
+| `emotion` | Subject expression | `neutral`, `angry`, `happy`, `sad`, `fierce`, `calm` |
+| `complexity` | Detail level | `simple`, `medium`, `detailed` |
+| `animation_frame` | Sprite sheet frame | `idle_1`, `walk_3`, etc. |
+| `forbidden_elements` | Excluded items | `["text", "watermark", "white background", "complex scene"]` |
+
+Example:
+```json
+{
+  "subject": "fire mage",
+  "pose": "casting",
+  "camera_angle": "three-quarter",
+  "canvas_fill": "85%",
+  "emotion": "fierce",
+  "color_palette": "warm",
+  "complexity": "detailed"
+}
+```
+
+### Asset type prompt templates
+
+Each asset type uses a dedicated template injected into the generation prompt:
+
+- **Character / Enemy**: single subject, full body, centered, transparent alpha background, subject occupies 75-85% of canvas, no white rectangle/box, no scene background, clean silhouette, Unity/Godot sprite import ready
+- **Prop / Item**: single item, centered, transparent background, no ground shadow, inventory-ready icon
+- **Tile**: top-down orthographic view, edge-matchable, seamless repeatable (when requested), no perspective distortion
+- **UI Icon**: centered, transparent background, high contrast, simple readable shape, minimal design
+- **Effect / VFX**: transparent background, centered, high contrast, particle or energy style, game-ready sprite sheet frame
+
+### Negative prompt
+
+All generations include a comprehensive negative prompt that excludes:
+- text, watermark, logo, signature
+- white background, white square, white rectangle, white box, white frame
+- border, frame, cropped body, partial body
+- tiny character, far away, zoomed out
+- multiple characters, group, crowd
+- environment background, complex scene, landscape, room
+- realistic photo, realistic render, 3D render, plastic toy, smooth gradient
+
+## Sprite Post-processing & Quality Check
+
+Every generated asset automatically goes through a post-processing pipeline and quality assessment to ensure it is game-ready for Unity and Godot 2D sprite import:
+
+### Post-processing pipeline
+
+1. **White background removal** — Detects and removes near-white pixels (RGB >= 245 on all channels) by setting alpha to 0
+2. **Transparent PNG conversion** — Ensures all outputs are RGBA PNG with proper alpha channel
+3. **Padding trimming** — Crops excess transparent padding around the subject, leaving a small 8% margin
+4. **Subject centering** — Centers the visible subject on the canvas
+5. **Canvas fitting** — Scales the subject so it occupies approximately 75-85% of the output canvas
+
+If any step fails, the pipeline falls back to the unprocessed image and logs a warning — task generation does not fail.
+
+### Quality checks (non-blocking)
+
+Each processed image is analyzed for sprite readiness:
+
+| Check | Threshold | Purpose |
+|-------|-----------|---------|
+| `transparent_background` | Alpha channel present | Ensures RGBA format |
+| `subject_fill_ratio` | >= 0.55 | Warns if subject is too small on canvas |
+| `centered_subject` | offset <= 0.18 | Warns if subject is off-center |
+| `near_white_background` | ratio <= 0.25 | Warns if white background remnants remain |
+
+These checks produce warnings in `overall_message` but do **not** fail the task. Critical checks (`image_exists`, `is_png`, `file_size`) remain the only blocking validations.
+
+### Test the pipeline
+
+```bash
+cd backend
+python scripts/test_image_postprocess.py
+```
+
+Creates a white-background test image with a red square, runs normalization, and prints before/after analysis.
+
 ## Testing
 
 ```bash
