@@ -150,6 +150,63 @@ python scripts/test_image_postprocess.py
 
 Creates a white-background test image with a red square, runs normalization, and prints before/after analysis.
 
+## Structured Asset Generation UI
+
+The web interface provides a structured generation panel that controls every aspect of the generated sprite through form fields rather than free-form text alone:
+
+### Asset type selector
+
+Click one of the type buttons to switch between **Character**, **Enemy**, **Item**, **Tile**, **UI Icon**, and **Effect**. The form fields change dynamically per type.
+
+### Structured controls per asset type
+
+| Control | Types | Description | Values |
+|---------|-------|-------------|--------|
+| Name | All | Subject identifier | Text input |
+| View | Character, Enemy | Camera angle | front / side / back / top-down / three-quarter |
+| Pose | Character, Enemy | Action pose | idle / walking / attacking / casting / hurt / dead |
+| Emotion | Character, Enemy | Expression | cute / angry / serious / crazy / happy / sad |
+| Appearance | All | Visual details | Text area |
+| Weapon | Character, Enemy | Held item | Text input |
+| Canvas Fill | All | Subject size on canvas | 60% / 75% / 85% |
+| Complexity | All | Detail level | simple / medium / detailed |
+| Color Palette | All | Main color scheme | Text input (e.g. "red, black, gold") |
+| Outline Style | Character, Enemy, Item | Line art | clean / bold / thin / pixel / none |
+| Background | Character, Enemy | BG type | transparent / solid |
+| Category | Item | Item type | weapon / potion / coin / key / food / gem |
+| Tile Type | Tile | Terrain type | floor / wall / grass / water / lava / road |
+| Material | Tile | Texture | Text input |
+| Seamless | Tile | Tiling | yes / no |
+| Purpose | UI Icon | Function | health / coin / skill / inventory / settings / map |
+| Shape | UI Icon | Frame | circle / square / diamond / no_frame |
+| Effect Type | Effect | Element | fire / ice / lightning / healing / explosion / poison / shield |
+| Motion | Effect | Movement | burst / spiral / slash / aura / trail / flicker |
+| Size | All | Output resolution | 32x32 / 64x64 / 128x128 / 256x256 / 512x512 |
+
+### Quick templates
+
+Five default templates at the top for instant fill:
+- **Pixel demon** enemy (pixel art red demon)
+- **Chibi mage** character (Q-style blue mage)
+- **Coin** item (gold coin icon)
+- **Grass** tile (seamless grass terrain)
+- **Fireball** effect (flame burst VFX)
+
+### Two-column layout
+
+- **Left column**: structured form with type selector, all parameter fields, tag chips, generate button, and collapsible prompt preview
+- **Right column**: sticky preview panel with checkerboard background (for transparent PNG visibility), progress steps, quality check results, and result actions (download, copy, regenerate, modify, quick optimize)
+
+### Quality check display
+
+After generation, the preview panel shows non-blocking quality metrics from the backend:
+- **Transparent background** — alpha channel presence
+- **Subject fill ratio** — warns if < 55%
+- **Centered subject** — warns if offset > 18%
+- **Near white background** — warns if > 25% residue
+
+Passed checks show as green checkmarks; warnings show as yellow alerts. These never block generation.
+
 ## Testing
 
 ```bash

@@ -197,7 +197,28 @@ button:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
 
 hr{border:none;border-top:1px solid #1e293b;margin:12px 0}
 
+.gen-layout{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+.gen-form-panel{min-width:0}
+.gen-preview-panel{position:sticky;top:16px}
+.preview-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;background-image:repeating-conic-gradient(#0b1120 0 25%,#111827 0 50%);background-size:16px 16px;border-radius:7px;border:1px solid #1e293b;color:#64748b;font-size:.68rem;text-align:center;padding:20px}
+.preview-placeholder .ph-icon{font-size:2rem;opacity:.15;margin-bottom:8px}
+.preview-img-lg{max-width:100%;max-height:320px;object-fit:contain;border-radius:7px;display:block;margin:0 auto}
+.quality-check-list{list-style:none;padding:0;margin:8px 0 0}
+.quality-check-list li{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:4px;font-size:.62rem;margin-bottom:3px;background:#0f172a}
+.quality-check-list li.pass{color:#4ade80}
+.quality-check-list li.warn{color:#fbbf24;background:#2d2300}
+.quality-check-list li .qc-icon{flex-shrink:0;font-size:.65rem}
+.structured-field{margin-bottom:10px}
+.structured-field label{display:block;margin-bottom:2px;font-size:.68rem;color:#94a3b8;font-weight:500}
+.structured-field .sf-hint{font-size:.6rem;color:#64748b;margin-bottom:3px;line-height:1.3}
+.structured-field select,.structured-field input{width:100%;padding:6px 10px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#e2e8f0;font-size:.7rem;font-family:inherit}
+.structured-field select:focus,.structured-field input:focus{outline:none;border-color:#e94560;box-shadow:0 0 0 2px rgba(233,69,96,.1)}
+.sf-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
 @media(max-width:860px){
+  .gen-layout{grid-template-columns:1fr}
+  .gen-preview-panel{position:static;margin-top:12px}
+}
   .main-layout{grid-template-columns:1fr}
   .type-bar{justify-content:center}
 }
@@ -272,9 +293,8 @@ hr{border:none;border-top:1px solid #1e293b;margin:12px 0}
     <div class="panel" style="margin-bottom:16px">
       <div class="panel-header">生成新素材</div>
       <div class="panel-body">
-
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <span style="font-size:.65rem;color:#64748b">快速开始</span>
+          <span style="font-size:.65rem;color:#64748b">快速模板</span>
           <span style="font-size:.6rem;color:#60a5fa;cursor:pointer" id="template-more-toggle" onclick="toggleMoreTemplates()">更多模板</span>
         </div>
         <div class="template-grid" id="template-grid"></div>
@@ -290,40 +310,55 @@ hr{border:none;border-top:1px solid #1e293b;margin:12px 0}
 
         <select id="gen-type" onchange="onTypeChange()" style="display:none"><option value="character">角色</option><option value="enemy">敌人</option><option value="item">道具</option><option value="tile">瓦片</option><option value="ui_icon">UI</option><option value="effect">特效</option></select>
 
-        <div id="gen-fields"></div>
-        <div id="completeness-hint" style="margin-top:8px;font-size:.62rem"></div>
-        <div class="btn-row" style="margin-top:8px">
-          <button class="btn-outline btn-xs" id="btn-random" onclick="randomCharacter()" style="display:none">随机完整角色</button>
-          <button class="btn-outline btn-xs" id="btn-clear-chips" onclick="clearAllChips()" style="display:none">清空选择</button>
+        <div class="gen-layout">
+          <div class="gen-form-panel">
+            <div id="gen-fields"></div>
+            <div id="completeness-hint" style="margin-top:8px;font-size:.62rem"></div>
+            <div class="btn-row" style="margin-top:8px">
+              <button class="btn-outline btn-xs" id="btn-random" onclick="randomCharacter()" style="display:none">随机完整角色</button>
+              <button class="btn-outline btn-xs" id="btn-clear-chips" onclick="clearAllChips()" style="display:none">清空选择</button>
+            </div>
+            <div class="btn-row">
+              <button class="btn-primary btn-xl" id="btn-generate" onclick="generateAsset()">生成素材</button>
+              <button class="btn-secondary btn-sm" id="btn-regenerate" style="display:none" onclick="regenerateAsset()">重新生成</button>
+            </div>
+            <div class="prompt-detail" id="prompt-detail">
+              <div class="prompt-detail-header" onclick="var h=this;h.classList.toggle('collapsed');var b=document.getElementById('pd-body');b.style.display=b.style.display==='none'?'block':'none'">
+                <span class="pd-arrow">&#9662;</span> Prompt 预览
+              </div>
+              <div class="prompt-detail-body" id="pd-body" style="display:none">
+                <div class="pd-section" id="pd-user"></div>
+                <div class="pd-section" id="pd-style"></div>
+                <div class="pd-section" id="pd-system"></div>
+                <div class="pd-section" id="pd-negative"></div>
+              </div>
+              <div class="pd-manual-toggle">
+                <input type="checkbox" id="manual-edit-toggle" onchange="toggleManualEdit()">
+                <label for="manual-edit-toggle" style="display:inline;color:#94a3b8;font-size:.63rem">手动编辑 Prompt</label>
+              </div>
+              <div class="pd-manual-area" id="pd-manual-area">
+                <textarea id="pd-manual-text" placeholder="在这里编辑最终发送给 AI 的 Prompt..." oninput="refreshPromptPreview()"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="gen-preview-panel">
+            <div class="panel" style="margin-bottom:0">
+              <div class="panel-header">预览</div>
+              <div class="panel-body">
+                <div id="gen-preview-img-area">
+                  <div class="preview-placeholder" id="preview-placeholder">
+                    <div class="ph-icon">&#9635;</div>
+                    <span>选择参数后点击生成</span>
+                  </div>
+                </div>
+                <div id="gen-progress" style="margin-top:8px"></div>
+                <div id="gen-error"></div>
+                <div id="gen-qc-results"></div>
+                <div id="gen-result"></div>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div class="btn-row">
-          <button class="btn-primary btn-xl" id="btn-generate" onclick="generateAsset()">生成素材</button>
-          <button class="btn-secondary btn-sm" id="btn-regenerate" style="display:none" onclick="regenerateAsset()">重新生成</button>
-        </div>
-
-        <div class="prompt-detail" id="prompt-detail">
-          <div class="prompt-detail-header" onclick="var h=this;h.classList.toggle('collapsed');var b=document.getElementById('pd-body');b.style.display=b.style.display==='none'?'block':'none'">
-            <span class="pd-arrow">&#9662;</span> Prompt 预览
-          </div>
-          <div class="prompt-detail-body" id="pd-body" style="display:none">
-            <div class="pd-section" id="pd-user"></div>
-            <div class="pd-section" id="pd-style"></div>
-            <div class="pd-section" id="pd-system"></div>
-            <div class="pd-section" id="pd-negative"></div>
-          </div>
-          <div class="pd-manual-toggle">
-            <input type="checkbox" id="manual-edit-toggle" onchange="toggleManualEdit()">
-            <label for="manual-edit-toggle" style="display:inline;color:#94a3b8;font-size:.63rem">手动编辑 Prompt</label>
-          </div>
-          <div class="pd-manual-area" id="pd-manual-area">
-            <textarea id="pd-manual-text" placeholder="在这里编辑最终发送给 AI 的 Prompt..." oninput="refreshPromptPreview()"></textarea>
-          </div>
-        </div>
-
-        <div id="gen-progress" style="margin-top:8px"></div>
-        <div id="gen-error"></div>
-        <div id="gen-result"></div>
       </div>
     </div>
 
@@ -473,6 +508,11 @@ async function saveStyle() {
 
 // ---- Quick Templates ----
 var QUICK_TEMPLATES = [
+  {label:'像素恶魔',type:'enemy',desc:'像素风红色恶魔敌人',fill:{name:'红色恶魔',view:'front',action:'attacking',appearance:'像素风、红色皮肤、黑色角、尖牙、凶恶',emotion:'angry',pose:'attacking','canvas-fill':'85%',complexity:'simple','outline-style':'pixel','color-palette':'红、黑',size:'64x64',background:'transparent'}},
+  {label:'Q版法师',type:'character',desc:'Q版蓝色法师角色',fill:{name:'蓝色小法师',view:'front',action:'idle',appearance:'Q版头大身小、蓝色长袍、法师帽、可爱大眼睛',emotion:'cute',pose:'idle','canvas-fill':'85%',complexity:'simple','outline-style':'clean','color-palette':'蓝、白、金',size:'64x64',background:'transparent'}},
+  {label:'金币',type:'item',desc:'金币道具图标',fill:{name:'金币',item_category:'coin',appearance:'金色圆币、星纹、闪亮、扁平',complexity:'medium','canvas-fill':'75%','color-palette':'金、黄',size:'64x64'}},
+  {label:'草地',type:'tile',desc:'草地无缝瓦片',fill:{name:'森林草地',tile_type:'grass',material:'绿草地、小花、自然',seamless:'true',complexity:'medium','color-palette':'绿色自然',size:'32x32'}},
+  {label:'火球',type:'effect',desc:'火焰技能特效',fill:{name:'火球爆炸',effect_type:'fire',motion_feeling:'burst',appearance:'橙红火焰、高亮、爆发',complexity:'medium','canvas-fill':'85%','color-palette':'橙红、亮黄',size:'64x64'}},
   {label:'蓝袍法师',type:'character',desc:'像素俯视蓝袍法师',fill:{name:'蓝袍月光法师',view:'top_down',action:'attack',appearance:'像素风、蓝白配色、白发、冷静、蓝色长袍、月光特效',weapon:'法杖',size:'64x64'}},
   {label:'红甲剑士',type:'character',desc:'日式RPG红甲战士',fill:{name:'红甲剑士',view:'side_view',action:'attack',appearance:'日式RPG、红黑配色、金发、自信、轻甲、披风飘动',weapon:'长剑',size:'64x64'}},
   {label:'绿史莱姆',type:'enemy',desc:'Q版绿色史莱姆',fill:{name:'绿色史莱姆',view:'front',action:'walk',appearance:'Q版、绿色主色、呆萌圆眼、圆滚滚、身体半透明、黏液质感',weapon:'',size:'64x64'}},
@@ -484,19 +524,16 @@ var QUICK_TEMPLATES = [
   {label:'Q版弓手',type:'character',desc:'Q版正面绿装弓手',fill:{name:'弓箭手',view:'front',action:'idle',appearance:'Q版头大身小、绿披风、小短腿、可爱',weapon:'弓箭',size:'64x64'}},
   {label:'暗黑法师',type:'enemy',desc:'暗黑兜帽紫袍法师',fill:{name:'暗黑法师',view:'front',action:'attack',appearance:'暗黑幻想、暗紫色、兜帽遮脸、邪恶、黑色斗篷',weapon:'暗黑法杖',size:'128x128'}},
   {label:'药水',type:'item',desc:'红色玻璃瓶',fill:{name:'生命药水',item_category:'potion',appearance:'红色液体、玻璃瓶、软木塞',size:'64x64'}},
-  {label:'金币',type:'item',desc:'闪亮金色星纹',fill:{name:'金币',item_category:'coin',appearance:'金色圆币、星纹、闪亮',size:'64x64'}},
   {label:'魔法书',type:'item',desc:'皮质发光符文',fill:{name:'魔法书',item_category:'weapon',appearance:'皮质封面、发光符文、神秘',size:'64x64'}},
   {label:'石砖',type:'tile',desc:'地牢石砖无缝',fill:{name:'石砖地板',tile_type:'floor',material:'灰色石砖、青苔',seamless:'true',size:'32x32'}},
-  {label:'草地',type:'tile',desc:'森林草地无缝',fill:{name:'森林草地',tile_type:'grass',material:'绿草地、小花',seamless:'true',size:'32x32'}},
   {label:'岩浆',type:'tile',desc:'火山岩浆裂纹',fill:{name:'岩浆地面',tile_type:'lava',material:'黑裂岩、橙岩浆',seamless:'true',size:'32x32'}},
   {label:'血量',type:'ui_icon',desc:'红色心形UI',fill:{name:'生命值图标',icon_purpose:'health',shape:'no_frame',appearance:'红色心形、高对比、简洁',size:'64x64'}},
   {label:'金币图标',type:'ui_icon',desc:'金色圆形像素',fill:{name:'金币图标',icon_purpose:'coin',shape:'circle',appearance:'金色硬币、圆形、像素风',size:'64x64'}},
   {label:'技能图标',type:'ui_icon',desc:'蓝光魔法徽章',fill:{name:'技能图标',icon_purpose:'skill',shape:'no_frame',appearance:'蓝色发光徽章、能量感',size:'64x64'}},
-  {label:'火球',type:'effect',desc:'火焰爆发特效',fill:{name:'火球爆炸',effect_type:'fire',motion_feeling:'burst',appearance:'橙红火焰、高亮、爆发',size:'64x64'}},
   {label:'冰霜',type:'effect',desc:'冰霜环绕光环',fill:{name:'冰霜光环',effect_type:'ice',motion_feeling:'aura',appearance:'蓝冰晶、透明、柔和',size:'64x64'}},
   {label:'雷电',type:'effect',desc:'雷电横向斩击',fill:{name:'雷电斩击',effect_type:'lightning',motion_feeling:'slash',appearance:'黄闪电、锐利、能量',size:'128x128'}}
 ];
-var VISIBLE_TEMPLATE_COUNT = 6;
+var VISIBLE_TEMPLATE_COUNT = 8;
 
 function toggleMoreTemplates() {
   showAllTemplates = !showAllTemplates;
@@ -518,7 +555,7 @@ function applyTemplate(tpl) {
   selectType(tpl.type);
   renderTypeFields(tpl.type);
   var f = tpl.fill;
-  var map = {name:'genf-name',view:'genf-view',action:'genf-action',appearance:'genf-appearance',weapon:'genf-weapon',item_category:'genf-item_category',tile_type:'genf-tile_type',material:'genf-material',seamless:'genf-seamless',icon_purpose:'genf-icon_purpose',shape:'genf-shape',effect_type:'genf-effect_type',motion_feeling:'genf-motion_feeling',size:'genf-size'};
+  var map = {name:'genf-name',view:'genf-view',action:'genf-action',pose:'genf-pose',appearance:'genf-appearance',weapon:'genf-weapon','canvas-fill':'genf-canvas-fill',complexity:'genf-complexity','outline-style':'genf-outline-style','color-palette':'genf-color-palette',emotion:'genf-emotion',background:'genf-background',item_category:'genf-item_category',tile_type:'genf-tile_type',material:'genf-material',seamless:'genf-seamless',icon_purpose:'genf-icon_purpose',shape:'genf-shape',effect_type:'genf-effect_type',motion_feeling:'genf-motion_feeling',size:'genf-size'};
   for (var k in f) { var el = document.getElementById(map[k]); if (el) el.value = f[k]; }
   refreshPromptPreview();
 }
@@ -536,7 +573,7 @@ function fillExample(type, ex) {
   selectType(type);
   renderTypeFields(type);
   var f = ex.fill;
-  var map = {name:'genf-name',view:'genf-view',action:'genf-action',appearance:'genf-appearance',weapon:'genf-weapon',item_category:'genf-item_category',tile_type:'genf-tile_type',material:'genf-material',seamless:'genf-seamless',icon_purpose:'genf-icon_purpose',shape:'genf-shape',effect_type:'genf-effect_type',motion_feeling:'genf-motion_feeling',size:'genf-size'};
+  var map = {name:'genf-name',view:'genf-view',action:'genf-action',pose:'genf-pose',appearance:'genf-appearance',weapon:'genf-weapon','canvas-fill':'genf-canvas-fill',complexity:'genf-complexity','outline-style':'genf-outline-style','color-palette':'genf-color-palette',emotion:'genf-emotion',item_category:'genf-item_category',tile_type:'genf-tile_type',material:'genf-material',seamless:'genf-seamless',icon_purpose:'genf-icon_purpose',shape:'genf-shape',effect_type:'genf-effect_type',motion_feeling:'genf-motion_feeling',size:'genf-size'};
   for (var k in f) { var el = document.getElementById(map[k]); if (el) el.value = f[k]; }
 }
 
@@ -685,14 +722,17 @@ function updateCompletenessHint() {
   var missing = [];
   var app = (getFieldVal('genf-appearance')||'').toLowerCase();
   var name = (getFieldVal('genf-name')||'').toLowerCase();
-  var weapon = (getFieldVal('genf-weapon')||'').toLowerCase();
-  var action = getFieldVal('genf-action');
+  var pose = getFieldVal('genf-pose');
+  var cf = getFieldVal('genf-canvas-fill');
+  var cp = getFieldVal('genf-color-palette');
+  var em = getFieldVal('genf-emotion');
   if (!app || app.length < 10) missing.push('外观特征');
   if (!name || name.length < 2) missing.push('角色名称');
-  if (!action || action === 'idle') missing.push('动作姿态');
-  if (!weapon) missing.push('武器');
+  if (!pose || pose === 'idle') missing.push('动作姿态');
+  if (!cp) missing.push('配色');
+  if (!em) missing.push('表情');
   if (missing.length === 0) {
-    el.innerHTML = '<span style="color:#4ade80">角色设定较完整，可以生成</span>';
+    el.innerHTML = '<span style="color:#4ade80">参数设置完整，可以生成</span>';
   } else if (missing.length <= 2) {
     el.innerHTML = '<span style="color:#fbbf24">建议补充：' + missing.join('、') + '</span>';
   } else {
@@ -704,45 +744,68 @@ function updateCompletenessHint() {
 var FIELD_DEFS = {
   character: [
     {id:'genf-name',label:'名称',hint:'角色叫什么？如"骑士战士"',type:'text',placeholder:'骑士战士',value:'骑士战士'},
-    {id:'genf-view',label:'视角',hint:'游戏的观察角度',type:'select',opts:[{v:'top_down',t:'俯视'},{v:'side_view',t:'侧视'},{v:'front',t:'正面'}],value:'top_down'},
-    {id:'genf-action',label:'动作',hint:'角色正在做什么',type:'select',opts:[{v:'idle',t:'待机'},{v:'walk',t:'行走'},{v:'attack',t:'攻击'},{v:'hurt',t:'受伤'},{v:'dead',t:'死亡'}],value:'idle'},
-    {id:'genf-appearance',label:'外观描述',hint:'服装、体型、颜色等视觉特征。如"铁盔、板甲、坚定"',type:'textarea',placeholder:'铁盔、板甲、坚定',value:'铁盔、板甲、坚定'},
+    {id:'genf-view',label:'视角',hint:'游戏的观察角度',type:'select',opts:[{v:'top_down',t:'俯视'},{v:'side_view',t:'侧视'},{v:'front',t:'正面'},{v:'back',t:'背面'},{v:'three-quarter',t:'3/4侧面'}],value:'top_down'},
+    {id:'genf-pose',label:'姿态',hint:'角色的动作姿态',type:'select',opts:[{v:'idle',t:'待机'},{v:'walking',t:'行走'},{v:'attacking',t:'攻击'},{v:'casting',t:'施法'},{v:'hurt',t:'受伤'},{v:'dead',t:'死亡'}],value:'idle'},
+    {id:'genf-emotion',label:'表情',hint:'角色的情绪表达',type:'select',opts:[{v:'cute',t:'可爱'},{v:'angry',t:'愤怒'},{v:'serious',t:'严肃'},{v:'crazy',t:'疯狂'},{v:'happy',t:'开心'},{v:'sad',t:'悲伤'}],value:'serious'},
+    {id:'genf-appearance',label:'外观',hint:'服装、体型、颜色、特征。如"铁盔、板甲"',type:'textarea',placeholder:'铁盔、板甲、坚定',value:'铁盔、板甲、坚定'},
     {id:'genf-weapon',label:'武器',hint:'留空不生成武器',type:'text',placeholder:'铁剑',value:''},
-    {id:'genf-size',label:'尺寸',hint:'图片像素大小',type:'select',opts:[{v:'64x64',t:'64x64'},{v:'128x128',t:'128x128'}],value:'64x64'}
+    {id:'genf-canvas-fill',label:'主体占比',hint:'控制主体占画布比例，85% 更饱满',type:'select',opts:[{v:'60%',t:'60% 较小'},{v:'75%',t:'75% 适中'},{v:'85%',t:'85% 饱满'}],value:'75%'},
+    {id:'genf-complexity',label:'复杂度',hint:'控制细节精细程度',type:'select',opts:[{v:'simple',t:'简洁'},{v:'medium',t:'中等'},{v:'detailed',t:'丰富'}],value:'medium'},
+    {id:'genf-color-palette',label:'配色',hint:'主色调方案',type:'text',placeholder:'红、黑、金',value:''},
+    {id:'genf-outline-style',label:'描边',hint:'轮廓线风格',type:'select',opts:[{v:'clean',t:'清晰描边'},{v:'bold',t:'粗描边'},{v:'thin',t:'细描边'},{v:'pixel',t:'像素描边'},{v:'none',t:'无描边'}],value:'clean'},
+    {id:'genf-background',label:'背景',hint:'图片背景类型',type:'select',opts:[{v:'transparent',t:'透明'},{v:'solid',t:'固定底色'}],value:'transparent'},
+    {id:'genf-size',label:'尺寸',hint:'图片像素大小',type:'select',opts:[{v:'64x64',t:'64x64'},{v:'128x128',t:'128x128'},{v:'256x256',t:'256x256'},{v:'512x512',t:'512x512'}],value:'64x64'}
   ],
   enemy: [
     {id:'genf-name',label:'名称',hint:'敌人叫什么？如"骷髅兵"',type:'text',placeholder:'骷髅兵',value:'骷髅兵'},
-    {id:'genf-view',label:'视角',hint:'游戏的观察角度',type:'select',opts:[{v:'top_down',t:'俯视'},{v:'side_view',t:'侧视'},{v:'front',t:'正面'}],value:'top_down'},
-    {id:'genf-action',label:'动作',hint:'敌人正在做什么',type:'select',opts:[{v:'idle',t:'待机'},{v:'walk',t:'行走'},{v:'attack',t:'攻击'},{v:'hurt',t:'受伤'},{v:'dead',t:'死亡'}],value:'idle'},
-    {id:'genf-appearance',label:'外观描述',hint:'体型、颜色、特征。如"白骨、红眼、暗黑"',type:'textarea',placeholder:'白骨、红眼、暗黑',value:'白骨、红眼、暗黑'},
+    {id:'genf-view',label:'视角',hint:'观察角度',type:'select',opts:[{v:'top_down',t:'俯视'},{v:'side_view',t:'侧视'},{v:'front',t:'正面'},{v:'back',t:'背面'},{v:'three-quarter',t:'3/4侧面'}],value:'front'},
+    {id:'genf-pose',label:'姿态',hint:'敌人的动作姿态',type:'select',opts:[{v:'idle',t:'待机'},{v:'walking',t:'行走'},{v:'attacking',t:'攻击'},{v:'casting',t:'施法'},{v:'hurt',t:'受伤'},{v:'dead',t:'死亡'}],value:'idle'},
+    {id:'genf-emotion',label:'表情',hint:'敌人的情绪表达',type:'select',opts:[{v:'angry',t:'愤怒'},{v:'crazy',t:'疯狂'},{v:'serious',t:'严肃'},{v:'cute',t:'呆萌'},{v:'happy',t:'开心'}],value:'angry'},
+    {id:'genf-appearance',label:'外观',hint:'体型、颜色、特征。如"白骨、红眼"',type:'textarea',placeholder:'白骨、红眼、暗黑',value:'白骨、红眼、暗黑'},
     {id:'genf-weapon',label:'武器',hint:'留空不生成武器',type:'text',placeholder:'骨刀',value:''},
-    {id:'genf-size',label:'尺寸',hint:'图片像素大小',type:'select',opts:[{v:'64x64',t:'64x64'},{v:'128x128',t:'128x128'}],value:'64x64'}
+    {id:'genf-canvas-fill',label:'主体占比',hint:'控制主体占画布比例，85% 更饱满',type:'select',opts:[{v:'60%',t:'60% 较小'},{v:'75%',t:'75% 适中'},{v:'85%',t:'85% 饱满'}],value:'75%'},
+    {id:'genf-complexity',label:'复杂度',hint:'控制细节精细程度',type:'select',opts:[{v:'simple',t:'简洁'},{v:'medium',t:'中等'},{v:'detailed',t:'丰富'}],value:'medium'},
+    {id:'genf-color-palette',label:'配色',hint:'主色调方案',type:'text',placeholder:'暗紫、红、黑',value:''},
+    {id:'genf-outline-style',label:'描边',hint:'轮廓线风格',type:'select',opts:[{v:'clean',t:'清晰描边'},{v:'bold',t:'粗描边'},{v:'thin',t:'细描边'},{v:'pixel',t:'像素描边'},{v:'none',t:'无描边'}],value:'clean'},
+    {id:'genf-background',label:'背景',hint:'图片背景类型',type:'select',opts:[{v:'transparent',t:'透明'},{v:'solid',t:'固定底色'}],value:'transparent'},
+    {id:'genf-size',label:'尺寸',hint:'图片像素大小',type:'select',opts:[{v:'64x64',t:'64x64'},{v:'128x128',t:'128x128'},{v:'256x256',t:'256x256'},{v:'512x512',t:'512x512'}],value:'64x64'}
   ],
   item: [
     {id:'genf-name',label:'名称',hint:'道具叫什么？如"生命药水"',type:'text',placeholder:'生命药水',value:'生命药水'},
-    {id:'genf-item_category',label:'类别',hint:'游戏的分类',type:'select',opts:[{v:'weapon',t:'武器'},{v:'potion',t:'药水'},{v:'coin',t:'钱币'},{v:'key',t:'钥匙'},{v:'food',t:'食物'}],value:'potion'},
-    {id:'genf-appearance',label:'外观描述',hint:'形状、颜色、材质。如"红液、玻璃瓶"',type:'textarea',placeholder:'红液、玻璃瓶、软木塞',value:'红液、玻璃瓶、软木塞'},
-    {id:'genf-size',label:'尺寸',hint:'图片像素大小',type:'select',opts:[{v:'64x64',t:'64x64'},{v:'128x128',t:'128x128'}],value:'64x64'}
+    {id:'genf-item_category',label:'类别',hint:'游戏分类',type:'select',opts:[{v:'weapon',t:'武器'},{v:'potion',t:'药水'},{v:'coin',t:'钱币'},{v:'key',t:'钥匙'},{v:'food',t:'食物'},{v:'gem',t:'宝石'}],value:'potion'},
+    {id:'genf-appearance',label:'外观',hint:'形状、颜色、材质。如"红液、玻璃瓶"',type:'textarea',placeholder:'红液、玻璃瓶',value:'红液、玻璃瓶'},
+    {id:'genf-canvas-fill',label:'主体占比',hint:'道具占画布比例',type:'select',opts:[{v:'60%',t:'60%'},{v:'75%',t:'75%'},{v:'85%',t:'85%'}],value:'75%'},
+    {id:'genf-complexity',label:'复杂度',hint:'细节精细程度',type:'select',opts:[{v:'simple',t:'简洁'},{v:'medium',t:'中等'},{v:'detailed',t:'丰富'}],value:'medium'},
+    {id:'genf-color-palette',label:'配色',hint:'主色调',type:'text',placeholder:'金、闪光',value:''},
+    {id:'genf-outline-style',label:'描边',hint:'轮廓线风格',type:'select',opts:[{v:'clean',t:'清晰'},{v:'bold',t:'粗'},{v:'thin',t:'细'},{v:'pixel',t:'像素'},{v:'none',t:'无'}],value:'clean'},
+    {id:'genf-size',label:'尺寸',hint:'图片像素大小',type:'select',opts:[{v:'64x64',t:'64x64'},{v:'128x128',t:'128x128'},{v:'256x256',t:'256x256'}],value:'64x64'}
   ],
   tile: [
     {id:'genf-name',label:'名称',hint:'瓦片叫什么？如"石砖地板"',type:'text',placeholder:'石砖地板',value:'石砖地板'},
     {id:'genf-tile_type',label:'类型',hint:'地图功能类型',type:'select',opts:[{v:'floor',t:'地板'},{v:'wall',t:'墙壁'},{v:'grass',t:'草地'},{v:'water',t:'水面'},{v:'lava',t:'岩浆'},{v:'road',t:'道路'}],value:'floor'},
     {id:'genf-material',label:'材质',hint:'视觉材质和纹理。如"灰石砖、青苔"',type:'text',placeholder:'灰石砖、青苔',value:'灰石砖、青苔'},
-    {id:'genf-seamless',label:'无缝',hint:'是否可无缝重复',type:'select',opts:[{v:'true',t:'是'},{v:'false',t:'否'}],value:'true'},
-    {id:'genf-size',label:'尺寸',hint:'图片像素大小',type:'select',opts:[{v:'32x32',t:'32x32'},{v:'64x64',t:'64x64'}],value:'32x32'}
+    {id:'genf-seamless',label:'无缝',hint:'是否可无缝重复',type:'select',opts:[{v:'true',t:'是（用于Tilemap平铺）'},{v:'false',t:'否'}],value:'true'},
+    {id:'genf-complexity',label:'复杂度',hint:'细节精细程度',type:'select',opts:[{v:'simple',t:'简洁'},{v:'medium',t:'中等'},{v:'detailed',t:'丰富'}],value:'simple'},
+    {id:'genf-color-palette',label:'配色',hint:'主色调',type:'text',placeholder:'灰、绿苔',value:''},
+    {id:'genf-size',label:'尺寸',hint:'图片像素大小（建议32或64）',type:'select',opts:[{v:'32x32',t:'32x32'},{v:'64x64',t:'64x64'},{v:'128x128',t:'128x128'}],value:'32x32'}
   ],
   ui_icon: [
     {id:'genf-name',label:'名称',hint:'图标叫什么？如"生命值"',type:'text',placeholder:'生命值图标',value:'生命值图标'},
-    {id:'genf-icon_purpose',label:'用途',hint:'游戏中的功能',type:'select',opts:[{v:'health',t:'生命'},{v:'coin',t:'货币'},{v:'skill',t:'技能'},{v:'inventory',t:'背包'},{v:'settings',t:'设置'}],value:'health'},
-    {id:'genf-shape',label:'形状',hint:'外框形状',type:'select',opts:[{v:'circle',t:'圆形'},{v:'square',t:'方形'},{v:'no_frame',t:'无边框'}],value:'circle'},
-    {id:'genf-appearance',label:'外观描述',hint:'颜色、图案。如"红心、白底、简洁"',type:'textarea',placeholder:'红心、白底、简洁',value:'红心、白底、简洁'},
-    {id:'genf-size',label:'尺寸',hint:'图片像素大小',type:'select',opts:[{v:'64x64',t:'64x64'},{v:'128x128',t:'128x128'}],value:'64x64'}
+    {id:'genf-icon_purpose',label:'用途',hint:'游戏中的功能',type:'select',opts:[{v:'health',t:'生命'},{v:'coin',t:'货币'},{v:'skill',t:'技能'},{v:'inventory',t:'背包'},{v:'settings',t:'设置'},{v:'map',t:'地图'}],value:'health'},
+    {id:'genf-shape',label:'形状',hint:'外框形状',type:'select',opts:[{v:'circle',t:'圆形'},{v:'square',t:'方形'},{v:'diamond',t:'菱形'},{v:'no_frame',t:'无边框'}],value:'circle'},
+    {id:'genf-appearance',label:'外观',hint:'颜色、图案。如"红心、白底"',type:'textarea',placeholder:'红心、白底、简洁',value:'红心、白底、简洁'},
+    {id:'genf-canvas-fill',label:'主体占比',hint:'图标占画布比例',type:'select',opts:[{v:'60%',t:'60%'},{v:'75%',t:'75%'},{v:'85%',t:'85%'}],value:'75%'},
+    {id:'genf-color-palette',label:'配色',hint:'主色调',type:'text',placeholder:'红、白',value:''},
+    {id:'genf-size',label:'尺寸',hint:'图片像素大小',type:'select',opts:[{v:'64x64',t:'64x64'},{v:'128x128',t:'128x128'},{v:'256x256',t:'256x256'}],value:'64x64'}
   ],
   effect: [
     {id:'genf-name',label:'名称',hint:'特效叫什么？如"火球爆炸"',type:'text',placeholder:'火球爆炸',value:'火球爆炸'},
-    {id:'genf-effect_type',label:'类型',hint:'元素类型',type:'select',opts:[{v:'fire',t:'火焰'},{v:'ice',t:'冰霜'},{v:'lightning',t:'雷电'},{v:'healing',t:'治疗'},{v:'explosion',t:'爆炸'}],value:'fire'},
-    {id:'genf-motion_feeling',label:'动势',hint:'运动形态',type:'select',opts:[{v:'burst',t:'爆发'},{v:'spiral',t:'螺旋'},{v:'slash',t:'斩击'},{v:'aura',t:'光环'}],value:'burst'},
-    {id:'genf-size',label:'尺寸',hint:'图片像素大小',type:'select',opts:[{v:'64x64',t:'64x64'},{v:'128x128',t:'128x128'}],value:'64x64'}
+    {id:'genf-effect_type',label:'类型',hint:'元素类型',type:'select',opts:[{v:'fire',t:'火焰'},{v:'ice',t:'冰霜'},{v:'lightning',t:'雷电'},{v:'healing',t:'治疗'},{v:'explosion',t:'爆炸'},{v:'poison',t:'毒气'},{v:'shield',t:'护盾'}],value:'fire'},
+    {id:'genf-motion_feeling',label:'动势',hint:'运动形态',type:'select',opts:[{v:'burst',t:'爆发'},{v:'spiral',t:'螺旋'},{v:'slash',t:'斩击'},{v:'aura',t:'光环'},{v:'trail',t:'拖尾'},{v:'flicker',t:'闪烁'}],value:'burst'},
+    {id:'genf-canvas-fill',label:'主体占比',hint:'特效占画布比例',type:'select',opts:[{v:'60%',t:'60%'},{v:'75%',t:'75%'},{v:'85%',t:'85%'}],value:'75%'},
+    {id:'genf-complexity',label:'复杂度',hint:'特效细节程度',type:'select',opts:[{v:'simple',t:'简洁'},{v:'medium',t:'中等'},{v:'detailed',t:'丰富'}],value:'medium'},
+    {id:'genf-color-palette',label:'配色',hint:'主色调',type:'text',placeholder:'橙红、亮黄',value:''},
+    {id:'genf-size',label:'尺寸',hint:'图片像素大小',type:'select',opts:[{v:'64x64',t:'64x64'},{v:'128x128',t:'128x128'},{v:'256x256',t:'256x256'}],value:'64x64'}
   ]
 };
 
@@ -821,17 +884,34 @@ function slimeActionHint(type) {
 }
 
 function composeDescription(type) {
-  var name = getFieldVal('genf-name'), app = getFieldVal('genf-appearance');
-  if (type==='character'||type==='enemy') {
-    var v=getFieldVal('genf-view'),a=getFieldVal('genf-action'),w=getFieldVal('genf-weapon');
-    var p=[name,'2D sprite',v+' view',a+' pose']; if(app) p.push(app); if(w) p.push('holding '+w);
-    return p.join(', ');
+  var parts=[];
+  var an=getFieldVal('genf-name'),ap=getFieldVal('genf-appearance');
+  var av=getFieldVal('genf-view'),pos=getFieldVal('genf-pose'),em=getFieldVal('genf-emotion');
+  var cf=getFieldVal('genf-canvas-fill'),cx=getFieldVal('genf-complexity'),cp=getFieldVal('genf-color-palette'),os=getFieldVal('genf-outline-style'),bg=getFieldVal('genf-background');
+
+  var typeMap={character:'Character',enemy:'Enemy',item:'Item',tile:'Tile',ui_icon:'UI Icon',effect:'Effect'};
+  parts.push('Asset type: '+(typeMap[type]||type));
+
+  if(an)parts.push('Subject: '+an);
+  if(av){var vm={top_down:'top-down',side_view:'side',front:'front',back:'back','three-quarter':'three-quarter'};parts.push('View: '+(vm[av]||av));}
+  if(pos){var pm={idle:'idle',walking:'walking',attacking:'attacking',casting:'casting',hurt:'hurt',dead:'dead'};parts.push('Pose: '+(pm[pos]||pos));}
+  if(em){var emm={cute:'cute',angry:'angry',serious:'serious',crazy:'crazy',happy:'happy',sad:'sad'};parts.push('Emotion: '+(emm[em]||em));}
+  if(cp)parts.push('Main colors: '+cp);
+  if(cf)parts.push('Canvas fill: '+cf);
+  if(bg)parts.push('Background: '+bg);
+  if(cx){var cxm={simple:'simple',medium:'medium',detailed:'detailed'};parts.push('Complexity: '+(cxm[cx]||cx));}
+  if(os)parts.push('Outline: '+os);
+
+  if(ap)parts.push('Appearance: '+ap);
+  if(type==='character'||type==='enemy'){
+    var w=getFieldVal('genf-weapon');if(w)parts.push('Weapon: '+w);
   }
-  if (type==='item') { var c=getFieldVal('genf-item_category'); return [c,name,'game item',app].filter(Boolean).join(', '); }
-  if (type==='tile') { var tt=getFieldVal('genf-tile_type'),m=getFieldVal('genf-material'),s=getFieldVal('genf-seamless'); var p=[tt,'tile',m]; if(s==='true')p.push('seamless'); return p.filter(Boolean).join(', '); }
-  if (type==='ui_icon') { var ip=getFieldVal('genf-icon_purpose'),sh=getFieldVal('genf-shape'); return [ip,'icon',name,sh+' shape',app].filter(Boolean).join(', '); }
-  if (type==='effect') { var et=getFieldVal('genf-effect_type'),mf=getFieldVal('genf-motion_feeling'); return [et,'effect',name,mf,app].filter(Boolean).join(', '); }
-  return app||name||'';
+  if(type==='item'){var ic=getFieldVal('genf-item_category');if(ic)parts.push('Category: '+ic);}
+  if(type==='tile'){var tt=getFieldVal('genf-tile_type'),tm=getFieldVal('genf-material'),ts=getFieldVal('genf-seamless');if(tt)parts.push('Tile type: '+tt);if(tm)parts.push('Material: '+tm);if(ts==='true')parts.push('Seamless repeatable');}
+  if(type==='ui_icon'){var ip=getFieldVal('genf-icon_purpose'),sh=getFieldVal('genf-shape');if(ip)parts.push('Purpose: '+ip);if(sh)parts.push('Shape: '+sh);}
+  if(type==='effect'){var et=getFieldVal('genf-effect_type'),mf=getFieldVal('genf-motion_feeling');if(et)parts.push('Effect type: '+et);if(mf)parts.push('Motion: '+mf);}
+
+  return parts.join('; ');
 }
 function getGenParams() {
   var pid=getProjectId(),type=document.getElementById('gen-type').value;
@@ -840,7 +920,22 @@ function getGenParams() {
   var desc=(manualOn&&manualText)?manualText:composeDescription(type);
   return {
     project_id:pid,asset_type:type,description:desc,size:getFieldVal('genf-size')||'64x64',quantity:1,
-    extra_params:{direction:getFieldVal('genf-view')||'',background:'transparent',usage:type==='enemy'?'enemy_sprite':(type==='character'?'player_sprite':''),name:getFieldVal('genf-name'),view:getFieldVal('genf-view'),action:getFieldVal('genf-action'),appearance:getFieldVal('genf-appearance'),weapon:getFieldVal('genf-weapon'),item_category:getFieldVal('genf-item_category'),tile_type:getFieldVal('genf-tile_type'),material:getFieldVal('genf-material'),seamless:getFieldVal('genf-seamless'),icon_purpose:getFieldVal('genf-icon_purpose'),shape:getFieldVal('genf-shape'),effect_type:getFieldVal('genf-effect_type'),motion_feeling:getFieldVal('genf-motion_feeling')}
+    extra_params:{
+      direction:getFieldVal('genf-view')||'',background:getFieldVal('genf-background')||'transparent',
+      usage:type==='enemy'?'enemy_sprite':(type==='character'?'player_sprite':''),
+      name:getFieldVal('genf-name'),view:getFieldVal('genf-view'),
+      action:getFieldVal('genf-pose'),
+      appearance:getFieldVal('genf-appearance'),weapon:getFieldVal('genf-weapon'),
+      item_category:getFieldVal('genf-item_category'),tile_type:getFieldVal('genf-tile_type'),
+      material:getFieldVal('genf-material'),seamless:getFieldVal('genf-seamless'),
+      icon_purpose:getFieldVal('genf-icon_purpose'),shape:getFieldVal('genf-shape'),
+      effect_type:getFieldVal('genf-effect_type'),motion_feeling:getFieldVal('genf-motion_feeling'),
+      pose:getFieldVal('genf-pose'),camera_angle:getFieldVal('genf-view'),
+      body_ratio:'',canvas_fill:getFieldVal('genf-canvas-fill'),
+      outline_style:getFieldVal('genf-outline-style'),color_palette:getFieldVal('genf-color-palette'),
+      emotion:getFieldVal('genf-emotion'),complexity:getFieldVal('genf-complexity'),
+      animation_frame:'',forbidden_elements:['text','watermark','white background','frame','border']
+    }
   };
 }
 
@@ -849,10 +944,16 @@ function refreshPromptPreview() {
   var userParts=[];
   userParts.push({l:'类型',v:getAssetTypeName(type)});
   var fn=getFieldVal('genf-name'); if(fn)userParts.push({l:'名称',v:fn});
-  var fv=getFieldVal('genf-view'); if(fv){var vm={top_down:'俯视',side_view:'侧视',front:'正面'};userParts.push({l:'视角',v:vm[fv]||fv});}
-  var fa=getFieldVal('genf-action'); if(fa){var am={idle:'待机',walk:'行走',attack:'攻击',hurt:'受伤',dead:'死亡'};userParts.push({l:'动作',v:am[fa]||fa});}
+  var fv=getFieldVal('genf-view'); if(fv){var vm={top_down:'俯视',side_view:'侧视',front:'正面',back:'背面','three-quarter':'3/4侧'};userParts.push({l:'视角',v:vm[fv]||fv});}
+  var fp=getFieldVal('genf-pose'); if(fp){var pm={idle:'待机',walking:'行走',attacking:'攻击',casting:'施法',hurt:'受伤',dead:'死亡'};userParts.push({l:'姿态',v:pm[fp]||fp});}
+  var fe=getFieldVal('genf-emotion'); if(fe){var emm={cute:'可爱',angry:'愤怒',serious:'严肃',crazy:'疯狂',happy:'开心',sad:'悲伤'};userParts.push({l:'表情',v:emm[fe]||fe});}
   var fap=getFieldVal('genf-appearance'); if(fap)userParts.push({l:'外观',v:fap});
   var fw=getFieldVal('genf-weapon'); if(fw)userParts.push({l:'武器',v:fw});
+  var fcf=getFieldVal('genf-canvas-fill'); if(fcf)userParts.push({l:'占比',v:fcf});
+  var fcx=getFieldVal('genf-complexity'); if(fcx)userParts.push({l:'复杂度',v:fcx});
+  var fcp=getFieldVal('genf-color-palette'); if(fcp)userParts.push({l:'配色',v:fcp});
+  var fos=getFieldVal('genf-outline-style'); if(fos)userParts.push({l:'描边',v:fos});
+  var fbg=getFieldVal('genf-background'); if(fbg)userParts.push({l:'背景',v:fbg==='transparent'?'透明':'固定底色'});
   var fc=getFieldVal('genf-item_category'); if(fc)userParts.push({l:'类别',v:fc});
   var ft=getFieldVal('genf-tile_type'); if(ft)userParts.push({l:'瓦片',v:ft});
   var fm=getFieldVal('genf-material'); if(fm)userParts.push({l:'材质',v:fm});
@@ -875,8 +976,10 @@ function refreshPromptPreview() {
   var isSl=type==='enemy'&&((getFieldVal('genf-name')||'').toLowerCase().indexOf('slime')>=0||(getFieldVal('genf-name')||'').toLowerCase().indexOf('史莱姆')>=0||(getFieldVal('genf-appearance')||'').toLowerCase().indexOf('slime')>=0);
   if(isSl){sysH+='<span class="pd-item warn">slime: walk auto-to-bouncing</span>';sysH+='<span class="pd-item active">round blob, simple face</span>';}
   if(art==='pixel_art')sysH+='<span class="pd-item active">hard edges, limited palette, no 3D</span>';
+  var fcf2=getFieldVal('genf-canvas-fill');if(fcf2)sysH+='<span class="pd-item active">canvas fill: '+fcf2+'</span>';
+  var fcp2=getFieldVal('genf-complexity');if(fcp2)sysH+='<span class="pd-item active">complexity: '+fcp2+'</span>';
   document.getElementById('pd-system').innerHTML=sysH;
-  document.getElementById('pd-negative').innerHTML='<div class="pd-section-title">Negative</div><span class="pd-text">3d render, plastic toy, smooth gradient, soft lighting, text, watermark, blurry, complex scene, ground shadow</span>';
+  document.getElementById('pd-negative').innerHTML='<div class="pd-section-title">Negative</div><span class="pd-text">3d render, plastic toy, smooth gradient, soft lighting, text, watermark, white background, white rectangle, border, frame, cropped body, tiny character, multiple characters, complex scene, realistic photo</span>';
   if(manualOn){var mt=document.getElementById('pd-manual-text');if(!mt.value)mt.value=composeDescription(type);document.getElementById('pd-manual-area').style.display='block';}
 }
 var SYSTEM_RULES={character:['2D sprite','full body','centered','transparent bg','clean silhouette','Unity ready'],enemy:['2D sprite','full body','centered','transparent bg','clean silhouette','Unity ready'],item:['item icon','centered','transparent bg','simple silhouette'],tile:['2D tile','top-down','edge-matchable','Unity Tilemap'],ui_icon:['UI icon','centered','transparent bg','high contrast','no text'],effect:['VFX sprite','centered','transparent bg','high contrast','no scene']};
@@ -902,23 +1005,51 @@ async function generateAsset() {
 }
 function showResultPanel(params,task){
   var p=params.extra_params||{},pu=task.preview_url||'',du=task.download_url||'',desc=params.description;
-  var tags=[];if(p.name)tags.push(p.name);if(p.view)tags.push(p.view);if(p.action)tags.push(p.action);if(p.item_category)tags.push(p.item_category);if(p.tile_type)tags.push(p.tile_type);if(p.effect_type)tags.push(p.effect_type);if(p.motion_feeling)tags.push(p.motion_feeling);
-  var h='<div class="result-panel"><div class="msg msg-success">生成成功</div><div class="rp-img"><img src="'+pu+'" onerror="this.style.display=\\x27none\\x27"></div><div class="rp-meta"><span class="rp-tag">'+getAssetTypeName(params.asset_type)+'</span>';
-  if(params.size)h+='<span class="rp-tag">'+params.size+'</span>';
-  for(var t=0;t<tags.length;t++)h+='<span class="rp-tag">'+tags[t]+'</span>';
-  h+='</div>';
-  if(desc)h+='<div class="rp-section"><div class="rp-label">Prompt</div><div class="rp-text mono">'+escapeHtml(desc)+'</div></div>';
-  h+='<div class="rp-actions"><a href="'+du+'" class="btn-success btn-sm" style="text-decoration:none">下载</a><button class="btn-outline btn-sm" onclick="copyText('+JSON.stringify(desc)+')">复制 Prompt</button><button class="btn-secondary btn-sm" onclick="regenerateWithSameParams()">重生成</button><button class="btn-outline btn-sm" onclick="toggleResultModify()">修改</button></div>';
+  var tags=[];if(p.name)tags.push(p.name);if(p.view)tags.push(p.view);if(p.pose)tags.push(p.pose);if(p.emotion)tags.push(p.emotion);if(p.canvas_fill)tags.push('fill:'+p.canvas_fill);
+  var ph=document.getElementById('preview-placeholder');if(ph)ph.style.display='none';
+  var imgArea=document.getElementById('gen-preview-img-area');
+  if(pu)imgArea.innerHTML='<div style="text-align:center;background-image:repeating-conic-gradient(#0b1120 0 25%,#111827 0 50%);background-size:14px 14px;border-radius:7px;padding:12px"><img class="preview-img-lg" src="'+pu+'" onerror="this.style.display=\\x27none\\x27;this.parentElement.innerHTML=\\x27<div class=preview-placeholder><span>预览加载失败</span></div>\\x27"></div>';
+  var tagH='';for(var t=0;t<tags.length;t++)tagH+='<span class="rp-tag">'+tags[t]+'</span>';
+  var h='<div class="rp-meta">'+tagH+'</div>';
+  if(desc)h+='<div class="rp-section"><div class="rp-label">Prompt</div><div class="rp-text mono" style="max-height:60px;overflow-y:auto">'+escapeHtml(desc)+'</div></div>';
+  h+='<div class="rp-actions"><a href="'+du+'" class="btn-success btn-sm" style="text-decoration:none">下载</a><button class="btn-outline btn-sm" onclick="copyText('+JSON.stringify(desc)+')">复制</button><button class="btn-secondary btn-sm" onclick="regenerateWithSameParams()">重生成</button><button class="btn-outline btn-sm" onclick="toggleResultModify()">修改</button></div>';
   h+='<div class="rp-section" style="margin-top:8px;padding-top:6px;border-top:1px solid #1e293b"><div class="rp-label">快捷优化</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">';
   h+='<button class="example-btn" onclick="quickOptimize('+JSON.stringify('make it stricter pixel art, hard pixel edges, limited palette')+')">更像像素风</button>';
   h+='<button class="example-btn" onclick="quickOptimize('+JSON.stringify('add stronger dark outline, clearer silhouette')+')">增强轮廓</button>';
   h+='<button class="example-btn" onclick="quickOptimize('+JSON.stringify('avoid 3D toy-like rendering, flat 2D sprite style')+')">减少3D感</button>';
   h+='<button class="example-btn" onclick="quickOptimize('+JSON.stringify('simplify details, readable at 64x64')+')">适合64x64</button>';
-  h+='<button class="example-btn" onclick="quickOptimize('+JSON.stringify('use idle bouncing pose')+')">弹跳姿态</button>';
   h+='</div></div><div id="result-optimize-progress" style="margin-top:4px"></div>';
   h+='<div class="result-modify-area" id="result-modify-area" style="display:none"><label style="font-size:.6rem;color:#94a3b8">修改意见</label><div class="rm-row"><input id="result-modify-input" placeholder="如：改成红色 / 更可爱 / 武器更明显"><button class="btn-primary btn-sm" onclick="modifyFromResult()">生成修改版</button></div><div id="result-modify-progress" style="margin-top:4px"></div></div>';
-  h+='</div>';
+
+  if(task.checks||task.quality_result){
+    var checks=task.checks||(task.quality_result&&task.quality_result.checks)||[];
+    if(checks.length>0){
+      h+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid #1e293b"><div class="rp-label" style="font-size:.6rem;color:#94a3b8;margin-bottom:4px">质量检查</div><ul class="quality-check-list">';
+      for(var c=0;c<checks.length;c++){
+        var ch=checks[c],cls=ch.passed?'pass':'warn',icon=ch.passed?'\u2713':'\u26A0';
+        h+='<li class="'+cls+'"><span class="qc-icon">'+icon+'</span> '+escapeHtml(ch.name)+': '+escapeHtml(ch.message||(ch.passed?'OK':'Warning'))+'</li>';
+      }
+      h+='</ul></div>';
+    }
+  }
+
   document.getElementById('gen-result').innerHTML=h;document.getElementById('gen-result').style.display='block';
+  renderQualityCheckResults(task);
+  renderQualityCheckResults(task);
+}
+function renderQualityCheckResults(task) {
+  var qc=document.getElementById('gen-qc-results');if(!qc)return;
+  var checks=task.checks||(task.quality_result&&task.quality_result.checks)||[];
+  if(checks.length===0){qc.innerHTML='';return;}
+  var h='<div style="margin-top:8px"><div style="font-size:.62rem;color:#94a3b8;margin-bottom:4px;font-weight:600">质量检测</div><ul class="quality-check-list">';
+  var labelMap={image_exists:'文件存在',is_png:'PNG格式',file_size:'文件大小',size_match:'尺寸匹配',alpha_channel:'Alpha通道',transparent_background:'透明背景',subject_fill_ratio:'主体占比',centered_subject:'居中',near_white_background:'白底残留',white_background_removed:'白底清除'};
+  for(var c=0;c<checks.length;c++){
+    var ch=checks[c],cls=ch.passed?'pass':'warn',icon=ch.passed?'\u2713':'\u26A0';
+    var name=ch.name||'check',label=labelMap[name]||name;
+    h+='<li class="'+cls+'"><span class="qc-icon">'+icon+'</span> '+label+': '+escapeHtml(ch.message||(ch.passed?'通过':'注意'))+'</li>';
+  }
+  h+='</ul></div>';
+  qc.innerHTML=h;
 }
 function toggleResultModify(){var a=document.getElementById('result-modify-area');a.style.display=a.style.display==='none'?'block':'none';}
 async function quickOptimize(inst){
@@ -942,7 +1073,7 @@ function showGenError(errMsg){
 function retryGenerate(){document.getElementById('gen-error').style.display='none';generateAsset();}
 function restoreFieldsFromParams(params){
   if(!params)return;var t=params.asset_type||'character';selectType(t);renderTypeFields(t);
-  var p=params.extra_params||{},fm={name:'genf-name',view:'genf-view',action:'genf-action',appearance:'genf-appearance',weapon:'genf-weapon',item_category:'genf-item_category',tile_type:'genf-tile_type',material:'genf-material',seamless:'genf-seamless',icon_purpose:'genf-icon_purpose',shape:'genf-shape',effect_type:'genf-effect_type',motion_feeling:'genf-motion_feeling'};
+  var p=params.extra_params||{},fm={name:'genf-name',view:'genf-view',action:'genf-action',pose:'genf-pose',appearance:'genf-appearance',weapon:'genf-weapon','canvas-fill':'genf-canvas-fill',complexity:'genf-complexity','outline-style':'genf-outline-style','color-palette':'genf-color-palette',emotion:'genf-emotion',background:'genf-background',item_category:'genf-item_category',tile_type:'genf-tile_type',material:'genf-material',seamless:'genf-seamless',icon_purpose:'genf-icon_purpose',shape:'genf-shape',effect_type:'genf-effect_type',motion_feeling:'genf-motion_feeling'};
   for(var k in fm){if(p[k]!==undefined&&p[k]!==null){var el=document.getElementById(fm[k]);if(el)el.value=p[k];}}
 }
 async function regenerateAsset(){if(!lastGenParams){msg('请先生成','info');return;}restoreFieldsFromParams(lastGenParams);await generateAsset();}
@@ -975,7 +1106,7 @@ async function modifyCurrentAsset(){
   var a=currentDetailAsset,meta=a.metadata||{},bd=meta.description||a.name||'',t=a.asset_type,sz=meta.size||(a.width&&a.height?a.width+'x'+a.height:'64x64');
   var btn=document.getElementById('btn-modify'),pg=document.getElementById('modify-progress');btn.textContent='生成中...';btn.disabled=true;
   pg.innerHTML='<div style="padding:5px 9px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:5px;font-size:.6rem;color:#60a5fa;display:flex;align-items:center;gap:5px"><span class="step-spinner"></span>生成中...</div>';
-  var np={project_id:getProjectId(),asset_type:t,description:bd+', '+inst,size:sz,quantity:1,extra_params:{name:meta.description||a.name,appearance:inst,background:'transparent',direction:'',usage:t==='enemy'?'enemy_sprite':(t==='character'?'player_sprite':''),view:meta.view||'',action:meta.action||'',weapon:meta.weapon||'',item_category:meta.item_category||'',tile_type:meta.tile_type||'',material:meta.material||'',seamless:meta.seamless||'',icon_purpose:meta.icon_purpose||'',shape:meta.shape||'',effect_type:meta.effect_type||'',motion_feeling:meta.motion_feeling||''}};
+  var np={project_id:getProjectId(),asset_type:t,description:bd+', '+inst,size:sz,quantity:1,extra_params:{name:meta.name||a.name,appearance:inst,background:'transparent',direction:'',usage:t==='enemy'?'enemy_sprite':(t==='character'?'player_sprite':''),view:meta.view||'',action:meta.action||'',pose:meta.pose||'',emotion:meta.emotion||'',canvas_fill:meta.canvas_fill||'75%',complexity:meta.complexity||'medium',color_palette:meta.color_palette||'',outline_style:meta.outline_style||'clean',weapon:meta.weapon||'',item_category:meta.item_category||'',tile_type:meta.tile_type||'',material:meta.material||'',seamless:meta.seamless||'',icon_purpose:meta.icon_purpose||'',shape:meta.shape||'',effect_type:meta.effect_type||'',motion_feeling:meta.motion_feeling||'',forbidden_elements:['text','watermark','white background','frame','border']}};
   try{var d=await api(API+'/generations',{method:'POST',body:JSON.stringify(np)});if(d.success&&d.task&&d.task.status==='succeeded'){pg.innerHTML='<div class="msg msg-success" style="font-size:.6rem">修改版成功</div>';closeDetail();loadAssets();}else pg.innerHTML='<div class="msg msg-error" style="font-size:.6rem">'+translateError((d.task&&d.task.error_message)||d.error||'')+'</div>';}catch(e){pg.innerHTML='<div class="msg msg-error" style="font-size:.6rem">'+translateError(e.message)+'</div>';}
   btn.textContent='生成修改版';btn.disabled=false;
 }
@@ -988,7 +1119,7 @@ async function loadAssets(){
   try{
     var data=await api(API+'/projects/'+pid+'/assets');
     if(!data.success||!data.assets||data.assets.length===0){
-      cachedAssets=[];container.innerHTML='<div class="empty-state"><div class="empty-icon" style="font-size:2.5rem;opacity:.2">&#9635;</div><div class="empty-title">还没有素材</div><div class="empty-hint">选择一个模板或填写描述，生成你的第一个游戏素材</div><div class="empty-actions"><button class="btn-primary btn-sm" onclick="applyTemplate(QUICK_TEMPLATES[3])">生成绿色史莱姆</button><button class="btn-primary btn-sm" onclick="applyTemplate(QUICK_TEMPLATES[13])">生成金币图标</button></div></div>';
+      cachedAssets=[];container.innerHTML='<div class="empty-state"><div class="empty-icon" style="font-size:2.5rem;opacity:.2">&#9635;</div><div class="empty-title">还没有素材</div><div class="empty-hint">选择一个模板或填写描述，生成你的第一个游戏素材</div><div class="empty-actions"><button class="btn-primary btn-sm" onclick="applyTemplate(QUICK_TEMPLATES[0])">像素恶魔</button><button class="btn-primary btn-sm" onclick="applyTemplate(QUICK_TEMPLATES[2])">金币</button></div></div>';
       document.getElementById('stats-bar').innerHTML='';return;
     }
     cachedAssets=data.assets;renderAssets();

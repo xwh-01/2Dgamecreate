@@ -25,6 +25,16 @@ class ExtraParams(BaseModel):
     shape: Optional[str] = None
     effect_type: Optional[str] = None
     motion_feeling: Optional[str] = None
+    pose: Optional[str] = None
+    camera_angle: Optional[str] = None
+    body_ratio: Optional[str] = None
+    canvas_fill: Optional[str] = None
+    outline_style: Optional[str] = None
+    color_palette: Optional[str] = None
+    emotion: Optional[str] = None
+    complexity: Optional[str] = None
+    animation_frame: Optional[str] = None
+    forbidden_elements: Optional[list[str]] = None
 
 
 class GenerationCreateRequest(BaseModel):
